@@ -225,7 +225,11 @@ if st.session_state["structured"]:
     )
 
     subject = "Hersenspinsels"
-    body = st.session_state["structured"]
+    body = (
+        f"{st.session_state['structured']}\n\n"
+        f"---\n\n"
+        f"Letterlijke opname:\n{st.session_state['raw_text']}"
+    )
     mailto = (
         f"mailto:{EMAIL_TO}"
         f"?subject={urllib.parse.quote(subject)}"
