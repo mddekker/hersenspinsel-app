@@ -51,30 +51,68 @@ st.markdown(
         font-weight: 400;
     }
 
-    /* De grote opnameknop */
-    .stButton > button,
+    /* Puls-animatie tijdens opnemen */
+    @keyframes pulse-ring {
+        0%   { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45), 0 12px 40px rgba(220, 38, 38, 0.35); }
+        70%  { box-shadow: 0 0 0 22px rgba(220, 38, 38, 0),  0 12px 40px rgba(220, 38, 38, 0.35); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0),    0 12px 40px rgba(220, 38, 38, 0.35); }
+    }
+
+    /* Centreer de mic-component */
+    [data-testid="stCustomComponentV1"] {
+        display: flex !important;
+        justify-content: center !important;
+        margin: 12px 0 28px 0 !important;
+    }
+
+    /* Grote ronde opnameknop */
     [data-testid="stCustomComponentV1"] button {
+        width: 148px !important;
+        height: 148px !important;
+        border-radius: 50% !important;
+        background: linear-gradient(145deg, #EF4444 0%, #DC2626 100%) !important;
+        color: white !important;
+        border: none !important;
+        font-size: 42px !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
+        padding: 0 !important;
+        box-shadow: 0 12px 40px rgba(220, 38, 38, 0.35) !important;
+        transition: transform 0.15s ease !important;
+        cursor: pointer !important;
+        letter-spacing: 0 !important;
+    }
+
+    [data-testid="stCustomComponentV1"] button:hover {
+        transform: scale(1.06) !important;
+    }
+
+    [data-testid="stCustomComponentV1"] button:active {
+        transform: scale(0.96) !important;
+        animation: pulse-ring 1.2s ease-out infinite !important;
+    }
+
+    /* Gewone stButton-knoppen (reset e.d.) */
+    .stButton > button {
         background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
         color: white !important;
         border: none !important;
         border-radius: 999px !important;
-        padding: 24px 32px !important;
-        font-size: 18px !important;
+        padding: 18px 32px !important;
+        font-size: 17px !important;
         font-weight: 600 !important;
         width: 100% !important;
-        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3) !important;
+        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25) !important;
         transition: transform 0.15s ease, box-shadow 0.15s ease !important;
         letter-spacing: -0.2px !important;
     }
 
-    .stButton > button:hover,
-    [data-testid="stCustomComponentV1"] button:hover {
+    .stButton > button:hover {
         transform: translateY(-1px) !important;
-        box-shadow: 0 14px 36px rgba(37, 99, 235, 0.4) !important;
+        box-shadow: 0 14px 36px rgba(37, 99, 235, 0.35) !important;
     }
 
-    .stButton > button:active,
-    [data-testid="stCustomComponentV1"] button:active {
+    .stButton > button:active {
         transform: translateY(0) scale(0.98) !important;
     }
 
@@ -126,6 +164,16 @@ st.markdown(
         border: 1px solid #E2E8F0 !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
         padding: 16px !important;
+    }
+
+    /* Label onder de opnameknop */
+    .rec-label {
+        text-align: center;
+        font-size: 14px;
+        color: #94A3B8;
+        margin-top: -16px;
+        margin-bottom: 20px;
+        letter-spacing: 0.4px;
     }
 
     /* Status-tekst */
@@ -190,15 +238,16 @@ if "structured" not in st.session_state:
 if "raw_text" not in st.session_state:
     st.session_state["raw_text"] = ""
 
-# Microfoon-knop met directe spraakherkenning
+# Microfoon-knop
 text = speech_to_text(
     language="nl-NL",
-    start_prompt="🎙  Begin met opnemen",
-    stop_prompt="⏹  Stop met opnemen",
+    start_prompt="🎙",
+    stop_prompt="⏹",
     just_once=True,
-    use_container_width=True,
+    use_container_width=False,
     key="stt",
 )
+st.markdown('<div class="rec-label">Tik om op te nemen</div>', unsafe_allow_html=True)
 
 # Als er nieuwe spraak is herkend en het verschilt van wat we al hebben
 if text and text != st.session_state.get("raw_text", ""):
