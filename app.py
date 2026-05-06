@@ -51,32 +51,62 @@ st.markdown(
         font-weight: 400;
     }
 
-    /* De grote opnameknop */
-    .stButton > button,
+    /* Container van de microfoon-knop centreren */
+    [data-testid="stCustomComponentV1"] {
+        display: flex !important;
+        justify-content: center !important;
+        margin: 40px auto !important;
+    }
+
+    /* De grote ronde opnameknop */
     [data-testid="stCustomComponentV1"] button {
         background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
         color: white !important;
         border: none !important;
-        border-radius: 999px !important;
-        padding: 24px 32px !important;
-        font-size: 18px !important;
+        border-radius: 50% !important;
+        width: 240px !important;
+        height: 240px !important;
+        font-size: 22px !important;
         font-weight: 600 !important;
-        width: 100% !important;
-        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3) !important;
+        padding: 0 !important;
+        box-shadow:
+            0 20px 50px rgba(37, 99, 235, 0.35),
+            0 0 0 0 rgba(59, 130, 246, 0.5) !important;
         transition: transform 0.15s ease, box-shadow 0.15s ease !important;
         letter-spacing: -0.2px !important;
+        cursor: pointer !important;
+        animation: pulse 2.5s infinite !important;
     }
 
-    .stButton > button:hover,
+    @keyframes pulse {
+        0%   { box-shadow: 0 20px 50px rgba(37, 99, 235, 0.35), 0 0 0 0 rgba(59, 130, 246, 0.5); }
+        70%  { box-shadow: 0 20px 50px rgba(37, 99, 235, 0.35), 0 0 0 30px rgba(59, 130, 246, 0); }
+        100% { box-shadow: 0 20px 50px rgba(37, 99, 235, 0.35), 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+
     [data-testid="stCustomComponentV1"] button:hover {
-        transform: translateY(-1px) !important;
-        box-shadow: 0 14px 36px rgba(37, 99, 235, 0.4) !important;
+        transform: translateY(-2px) scale(1.02) !important;
     }
 
-    .stButton > button:active,
     [data-testid="stCustomComponentV1"] button:active {
-        transform: translateY(0) scale(0.98) !important;
+        transform: scale(0.96) !important;
     }
+
+    /* Reset/secundaire knop niet rond */
+    .stButton > button {
+        background: white !important;
+        color: #475569 !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 14px !important;
+        padding: 16px !important;
+        font-size: 15px !important;
+        font-weight: 500 !important;
+        width: 100% !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+        transition: transform 0.15s ease !important;
+    }
+    .stButton > button:hover { transform: translateY(-1px) !important; }
+    .stButton > button:active { transform: scale(0.98) !important; }
 
     /* Resultaat-kaart */
     .result-card {
@@ -193,10 +223,10 @@ if "raw_text" not in st.session_state:
 # Microfoon-knop met directe spraakherkenning
 text = speech_to_text(
     language="nl-NL",
-    start_prompt="🎙  Begin met opnemen",
-    stop_prompt="⏹  Stop met opnemen",
+    start_prompt="🎙",
+    stop_prompt="⏹",
     just_once=True,
-    use_container_width=True,
+    use_container_width=False,
     key="stt",
 )
 
