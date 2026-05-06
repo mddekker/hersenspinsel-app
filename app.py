@@ -248,30 +248,43 @@ components.html(
     }
 
     function stopRec() {
+      // BELANGRIJK: alles synchroon in user-click context, anders blokkeert iOS de navigatie
       manuallyStopped = true;
-      // Gebruik stop() zodat pending resultaten gefinaliseerd worden
-      if (recognition) {
-        try {
-          recognition.onend = () => finishRec();
-          recognition.stop();
-        } catch(e) {
-          finishRec();
-        }
-      } else {
-        finishRec();
-      }
-      // Veiligheidsnet: als stop niet snel genoeg een onend triggert, alsnog finishen
-      setTimeout(() => { if (recording) finishRec(); }, 600);
-    }
-
-    function finishRec() {
-      if (!recording) return;  // voorkom dubbele uitvoer
       recording = false;
       btn.textContent = '⏳';
       btn.classList.remove('recording');
-      status.textContent = 'Verwerken...';
 
-      // Combineer finale + nog-niet-finale tekst
+      const text = (fullText + ' ' + interimText).trim();
+
+      // Stop recognition op de achtergrond (we wachten niet op het resultaat)
+      if (recognition) {
+        try {
+          recognition.onend = null;
+          recognition.onresult = null;
+          recognition.abort();
+        } catch(e) {}
+      }
+
+      if (!text) {
+        status.textContent = 'Niets opgenomen. Probeer opnieuw.';
+        btn.textContent = '🎙';
+        return;
+      }
+
+      status.textContent = 'Verwerken...';
+      // Navigeer DIRECT in de user-click context (anders blokkeert iOS)
+      const url = new URL(window.parent.location.href);
+      url.searchParams.set('spinsel', text);
+      window.parent.location.href = url.toString();
+    }
+
+    function finishRec() {
+      // Wordt aangeroepen bij auto-stop (na pauze)
+      if (!recording) return;
+      recording = false;
+      btn.textContent = '⏳';
+      btn.classList.remove('recording');
+
       const text = (fullText + ' ' + interimText).trim();
       if (!text) {
         status.textContent = 'Niets opgenomen. Probeer opnieuw.';
@@ -279,6 +292,7 @@ components.html(
         return;
       }
 
+      status.textContent = 'Verwerken...';
       const url = new URL(window.parent.location.href);
       url.searchParams.set('spinsel', text);
       window.parent.location.href = url.toString();
