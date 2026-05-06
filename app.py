@@ -1,7 +1,7 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import anthropic
 import urllib.parse
-from streamlit_mic_recorder import speech_to_text
 
 st.set_page_config(
     page_title="Hersenspinsel",
@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# --- Heavy custom styling — geen Streamlit-look ---
+# --- Styling ---
 st.markdown(
     """
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E">
@@ -19,144 +19,53 @@ st.markdown(
 <meta name="apple-mobile-web-app-title" content="Hersenspinsel">
 
 <style>
-    /* Streamlit-elementen verbergen */
     #MainMenu, footer, header, .stDeployButton { display: none !important; }
 
-    /* Achtergrond + typografie */
     html, body, [data-testid="stAppViewContainer"] {
         background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
         font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
     }
-
     .block-container {
-        padding-top: 3rem !important;
+        padding-top: 2.5rem !important;
         padding-bottom: 2rem !important;
         max-width: 520px !important;
     }
-
-    /* App-titel */
     .app-title {
-        font-size: 32px;
-        font-weight: 700;
-        color: #0F172A;
-        text-align: center;
-        margin-bottom: 4px;
-        letter-spacing: -0.5px;
+        font-size: 32px; font-weight: 700; color: #0F172A;
+        text-align: center; margin-bottom: 4px; letter-spacing: -0.5px;
     }
     .app-subtitle {
-        font-size: 15px;
-        color: #64748B;
-        text-align: center;
-        margin-bottom: 48px;
-        font-weight: 400;
-    }
-
-    /* Pulserende ring rondom de knop */
-    @keyframes pulse-ring {
-        0%   { box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35), 0 0 0 0 rgba(239, 68, 68, 0.5); }
-        70%  { box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35), 0 0 0 32px rgba(239, 68, 68, 0); }
-        100% { box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35), 0 0 0 0 rgba(239, 68, 68, 0); }
-    }
-
-    /* Container van de microfoon-knop centreren */
-    [data-testid="stCustomComponentV1"] {
-        display: flex !important;
-        justify-content: center !important;
-        margin: 24px auto 40px auto !important;
-    }
-
-    /* DE GROTE RONDE OPNAMEKNOP */
-    [data-testid="stCustomComponentV1"] button {
-        width: 260px !important;
-        height: 260px !important;
-        border-radius: 50% !important;
-        background: linear-gradient(145deg, #EF4444 0%, #DC2626 100%) !important;
-        color: white !important;
-        border: none !important;
-        font-size: 96px !important;
-        line-height: 1 !important;
-        padding: 0 !important;
-        box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35) !important;
-        transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-        cursor: pointer !important;
-        animation: pulse-ring 2.4s ease-out infinite !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-
-    [data-testid="stCustomComponentV1"] button:hover {
-        transform: scale(1.04) !important;
-    }
-
-    [data-testid="stCustomComponentV1"] button:active {
-        transform: scale(0.96) !important;
+        font-size: 15px; color: #64748B; text-align: center;
+        margin-bottom: 24px; font-weight: 400;
     }
 
     /* Reset/secundaire knop */
     .stButton > button {
-        background: white !important;
-        color: #475569 !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 14px !important;
-        padding: 16px !important;
-        font-size: 15px !important;
-        font-weight: 500 !important;
-        width: 100% !important;
+        background: white !important; color: #475569 !important;
+        border: 1px solid #E2E8F0 !important; border-radius: 14px !important;
+        padding: 16px !important; font-size: 15px !important;
+        font-weight: 500 !important; width: 100% !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-        transition: transform 0.15s ease !important;
     }
-    .stButton > button:hover { transform: translateY(-1px) !important; }
-    .stButton > button:active { transform: scale(0.98) !important; }
 
-    /* Resultaat-kaart */
     .result-card {
-        background: white;
-        border-radius: 20px;
-        padding: 24px;
-        margin-top: 24px;
-        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+        background: white; border-radius: 20px; padding: 24px;
+        margin-top: 24px; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
         border: 1px solid #E2E8F0;
     }
     .result-card h3 {
-        margin-top: 0;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #64748B;
-        font-weight: 600;
+        margin-top: 0; font-size: 13px; text-transform: uppercase;
+        letter-spacing: 1px; color: #64748B; font-weight: 600;
     }
 
-    /* Mail-knop */
     .mail-button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        width: 100%;
-        height: 64px;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; height: 64px;
         background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-        color: white !important;
-        text-decoration: none !important;
-        font-size: 18px;
-        font-weight: 600;
-        border-radius: 16px;
-        margin-top: 16px;
-        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
-        transition: transform 0.15s ease;
+        color: white !important; text-decoration: none !important;
+        font-size: 18px; font-weight: 600; border-radius: 16px;
+        margin-top: 16px; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
     }
-    .mail-button:hover { transform: translateY(-1px); }
-    .mail-button:active { transform: scale(0.98); }
-
-    /* Status-tekst */
-    .status-text {
-        text-align: center;
-        color: #64748B;
-        font-size: 14px;
-        margin-top: 16px;
-    }
-
-    .stSpinner > div { border-color: #DC2626 !important; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -197,40 +106,165 @@ Hersenspinsels:
     return response.content[0].text.strip()
 
 
-# --- UI ---
+# --- Header ---
 st.markdown('<div class="app-title">🧠 Hersenspinsel</div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="app-subtitle">Tik op de knop, spreek je gedachten in, klaar.</div>',
     unsafe_allow_html=True,
 )
 
+# Init state
 if "structured" not in st.session_state:
     st.session_state["structured"] = ""
 if "raw_text" not in st.session_state:
     st.session_state["raw_text"] = ""
 
-# Microfoon-knop met directe spraakherkenning
-text = speech_to_text(
-    language="nl-NL",
-    start_prompt="🎙",
-    stop_prompt="⏹",
-    just_once=True,
-    use_container_width=False,
-    key="stt",
-)
-
-if text and text != st.session_state.get("raw_text", ""):
-    st.session_state["raw_text"] = text
+# Lees query param (komt binnen via custom HTML knop hieronder)
+qp_text = st.query_params.get("spinsel", "")
+if qp_text and qp_text != st.session_state.get("raw_text", ""):
+    st.session_state["raw_text"] = qp_text
+    st.query_params.clear()
     api_key = get_api_key()
     if not api_key:
         st.error("API key niet gevonden — check de Streamlit-secrets.")
     else:
         with st.spinner("Even structureren…"):
             try:
-                st.session_state["structured"] = structureer_als_todo(api_key, text)
+                st.session_state["structured"] = structureer_als_todo(api_key, qp_text)
             except Exception as e:
                 st.error(f"Fout: {e}")
 
+# --- DE GROTE RONDE OPNAMEKNOP (volledig custom HTML/JS) ---
+components.html(
+    """
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 30px 0 20px 0; background: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  #micbtn {
+    width: 240px; height: 240px; border-radius: 50%;
+    background: linear-gradient(145deg, #EF4444 0%, #DC2626 100%);
+    color: white; border: none; font-size: 96px;
+    line-height: 1; cursor: pointer;
+    box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35);
+    transition: transform 0.15s ease;
+    animation: pulse 2.5s ease-out infinite;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 20px 50px rgba(220,38,38,0.35), 0 0 0 0 rgba(239,68,68,0.5); }
+    70%  { box-shadow: 0 20px 50px rgba(220,38,38,0.35), 0 0 0 30px rgba(239,68,68,0); }
+    100% { box-shadow: 0 20px 50px rgba(220,38,38,0.35), 0 0 0 0 rgba(239,68,68,0); }
+  }
+  #micbtn:active { transform: scale(0.95); }
+  #micbtn.recording {
+    background: linear-gradient(145deg, #1F2937 0%, #111827 100%);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    animation: recording-pulse 1.2s ease-out infinite;
+  }
+  @keyframes recording-pulse {
+    0%   { box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 0 0 rgba(220,38,38,0.7); }
+    100% { box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 0 40px rgba(220,38,38,0); }
+  }
+  #status {
+    margin-top: 20px; color: #64748B; font-size: 14px;
+    min-height: 22px; text-align: center; max-width: 320px;
+    padding: 0 16px;
+  }
+</style>
+</head>
+<body>
+  <button id="micbtn">🎙</button>
+  <div id="status">Tik om te beginnen</div>
+  <script>
+    const btn = document.getElementById('micbtn');
+    const status = document.getElementById('status');
+    let recognition = null;
+    let recording = false;
+    let fullText = '';
+
+    btn.addEventListener('click', () => {
+      if (!recording) startRec(); else stopRec();
+    });
+
+    function startRec() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        status.textContent = '❌ Spraakherkenning niet ondersteund. Gebruik Safari op iPhone.';
+        return;
+      }
+      recognition = new SR();
+      recognition.lang = 'nl-NL';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      fullText = '';
+
+      recognition.onresult = (e) => {
+        let interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) fullText += e.results[i][0].transcript + ' ';
+          else interim += e.results[i][0].transcript;
+        }
+        const display = (fullText + interim).trim();
+        status.textContent = display.length > 80 ? '...' + display.slice(-80) : display;
+      };
+
+      recognition.onerror = (e) => {
+        status.textContent = 'Fout: ' + e.error + '. Probeer opnieuw.';
+        recording = false;
+        btn.textContent = '🎙';
+        btn.classList.remove('recording');
+      };
+
+      recognition.onend = () => {
+        if (recording) {
+          try { recognition.start(); } catch(e) {}
+        }
+      };
+
+      try { recognition.start(); } catch(e) {}
+      recording = true;
+      btn.textContent = '⏹';
+      btn.classList.add('recording');
+      status.textContent = '🔴 Aan het luisteren...';
+    }
+
+    function stopRec() {
+      recording = false;
+      if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+      }
+      btn.textContent = '⏳';
+      btn.classList.remove('recording');
+      status.textContent = 'Verwerken...';
+
+      const text = fullText.trim();
+      if (!text) {
+        status.textContent = 'Niets opgenomen. Probeer opnieuw.';
+        btn.textContent = '🎙';
+        return;
+      }
+
+      // Stuur naar Streamlit via query param (parent navigatie)
+      const url = new URL(window.parent.location.href);
+      url.searchParams.set('spinsel', text);
+      window.parent.location.href = url.toString();
+    }
+  </script>
+</body>
+</html>
+""",
+    height=360,
+)
+
+# --- Resultaat tonen ---
 if st.session_state["structured"]:
     st.markdown(
         f"""
@@ -263,8 +297,3 @@ if st.session_state["structured"]:
         st.session_state["structured"] = ""
         st.session_state["raw_text"] = ""
         st.rerun()
-elif st.session_state.get("raw_text"):
-    st.markdown(
-        f'<div class="status-text">📝 Opgenomen: <em>"{st.session_state["raw_text"][:100]}…"</em></div>',
-        unsafe_allow_html=True,
-    )
