@@ -189,6 +189,7 @@ components.html(
     let recognition = null;
     let recording = false;
     let fullText = '';
+    let interimText = '';
     let manuallyStopped = false;
 
     function handleTap(e) {
@@ -210,15 +211,16 @@ components.html(
       recognition.continuous = false;
       recognition.interimResults = true;
       fullText = '';
+      interimText = '';
       manuallyStopped = false;
 
       recognition.onresult = (e) => {
-        let interim = '';
+        interimText = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
           if (e.results[i].isFinal) fullText += e.results[i][0].transcript + ' ';
-          else interim += e.results[i][0].transcript;
+          else interimText += e.results[i][0].transcript;
         }
-        const display = (fullText + interim).trim();
+        const display = (fullText + interimText).trim();
         status.textContent = display.length > 80 ? '...' + display.slice(-80) : display;
       };
 
@@ -247,24 +249,30 @@ components.html(
 
     function stopRec() {
       manuallyStopped = true;
-      // Direct verwerken op basis van wat we al hebben
+      // Gebruik stop() zodat pending resultaten gefinaliseerd worden
       if (recognition) {
         try {
-          recognition.onend = null;
-          recognition.onresult = null;
-          recognition.abort();
-        } catch(e) {}
+          recognition.onend = () => finishRec();
+          recognition.stop();
+        } catch(e) {
+          finishRec();
+        }
+      } else {
+        finishRec();
       }
-      finishRec();
+      // Veiligheidsnet: als stop niet snel genoeg een onend triggert, alsnog finishen
+      setTimeout(() => { if (recording) finishRec(); }, 600);
     }
 
     function finishRec() {
+      if (!recording) return;  // voorkom dubbele uitvoer
       recording = false;
       btn.textContent = '⏳';
       btn.classList.remove('recording');
       status.textContent = 'Verwerken...';
 
-      const text = fullText.trim();
+      // Combineer finale + nog-niet-finale tekst
+      const text = (fullText + ' ' + interimText).trim();
       if (!text) {
         status.textContent = 'Niets opgenomen. Probeer opnieuw.';
         btn.textContent = '🎙';
