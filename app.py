@@ -183,6 +183,10 @@ components.html(
 <body>
   <button id="micbtn">🎙</button>
   <div id="status">Tik om te beginnen</div>
+  <form id="navForm" method="get" action="" target="_top" style="display:none;">
+    <input type="hidden" name="spinsel" id="spinselField">
+  </form>
+  <div id="fallback-link" style="margin-top:20px;display:none;"></div>
   <script>
     const btn = document.getElementById('micbtn');
     const status = document.getElementById('status');
@@ -272,10 +276,7 @@ components.html(
       }
 
       status.textContent = 'Verwerken...';
-      // Navigeer DIRECT in de user-click context (anders blokkeert iOS)
-      const url = new URL(window.parent.location.href);
-      url.searchParams.set('spinsel', text);
-      window.parent.location.href = url.toString();
+      navigateWithText(text);
     }
 
     function finishRec() {
@@ -293,9 +294,37 @@ components.html(
       }
 
       status.textContent = 'Verwerken...';
-      const url = new URL(window.parent.location.href);
-      url.searchParams.set('spinsel', text);
-      window.parent.location.href = url.toString();
+      navigateWithText(text);
+    }
+
+    function navigateWithText(text) {
+      // Bouw parent URL op
+      let parentPath = '/';
+      try { parentPath = window.parent.location.pathname; } catch(e) {}
+
+      // Methode 1: form submit met target="_top" (werkt in sandboxed iframes)
+      try {
+        const form = document.getElementById('navForm');
+        const field = document.getElementById('spinselField');
+        field.value = text;
+        form.action = parentPath;
+        form.submit();
+        // Geef het 800ms om te navigeren, anders fallback
+        setTimeout(() => showFallback(text, parentPath), 800);
+        return;
+      } catch(e) {}
+
+      showFallback(text, parentPath);
+    }
+
+    function showFallback(text, parentPath) {
+      // Toon een knop die de user moet tikken — anchor met target=_top werkt altijd
+      const div = document.getElementById('fallback-link');
+      const url = parentPath + '?spinsel=' + encodeURIComponent(text);
+      div.innerHTML = '<a href="' + url + '" target="_top" style="display:block;padding:20px 24px;background:linear-gradient(135deg,#10B981,#059669);color:white;text-decoration:none;border-radius:14px;text-align:center;font-size:17px;font-weight:600;box-shadow:0 8px 24px rgba(16,185,129,0.3);">➡️ Tik hier om door te gaan</a>';
+      div.style.display = 'block';
+      status.textContent = 'Bijna klaar — tik op de groene knop:';
+      btn.textContent = '🎙';
     }
   </script>
 </body>
