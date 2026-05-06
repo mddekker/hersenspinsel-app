@@ -47,52 +47,53 @@ st.markdown(
         font-size: 15px;
         color: #64748B;
         text-align: center;
-        margin-bottom: 40px;
+        margin-bottom: 48px;
         font-weight: 400;
+    }
+
+    /* Pulserende ring rondom de knop */
+    @keyframes pulse-ring {
+        0%   { box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35), 0 0 0 0 rgba(239, 68, 68, 0.5); }
+        70%  { box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35), 0 0 0 32px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35), 0 0 0 0 rgba(239, 68, 68, 0); }
     }
 
     /* Container van de microfoon-knop centreren */
     [data-testid="stCustomComponentV1"] {
         display: flex !important;
         justify-content: center !important;
-        margin: 40px auto !important;
+        margin: 24px auto 40px auto !important;
     }
 
-    /* De grote ronde opnameknop */
+    /* DE GROTE RONDE OPNAMEKNOP */
     [data-testid="stCustomComponentV1"] button {
-        background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+        width: 260px !important;
+        height: 260px !important;
+        border-radius: 50% !important;
+        background: linear-gradient(145deg, #EF4444 0%, #DC2626 100%) !important;
         color: white !important;
         border: none !important;
-        border-radius: 50% !important;
-        width: 240px !important;
-        height: 240px !important;
-        font-size: 22px !important;
-        font-weight: 600 !important;
+        font-size: 96px !important;
+        line-height: 1 !important;
         padding: 0 !important;
-        box-shadow:
-            0 20px 50px rgba(37, 99, 235, 0.35),
-            0 0 0 0 rgba(59, 130, 246, 0.5) !important;
+        box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35) !important;
         transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-        letter-spacing: -0.2px !important;
         cursor: pointer !important;
-        animation: pulse 2.5s infinite !important;
-    }
-
-    @keyframes pulse {
-        0%   { box-shadow: 0 20px 50px rgba(37, 99, 235, 0.35), 0 0 0 0 rgba(59, 130, 246, 0.5); }
-        70%  { box-shadow: 0 20px 50px rgba(37, 99, 235, 0.35), 0 0 0 30px rgba(59, 130, 246, 0); }
-        100% { box-shadow: 0 20px 50px rgba(37, 99, 235, 0.35), 0 0 0 0 rgba(59, 130, 246, 0); }
+        animation: pulse-ring 2.4s ease-out infinite !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
     [data-testid="stCustomComponentV1"] button:hover {
-        transform: translateY(-2px) scale(1.02) !important;
+        transform: scale(1.04) !important;
     }
 
     [data-testid="stCustomComponentV1"] button:active {
         transform: scale(0.96) !important;
     }
 
-    /* Reset/secundaire knop niet rond */
+    /* Reset/secundaire knop */
     .stButton > button {
         background: white !important;
         color: #475569 !important;
@@ -117,7 +118,6 @@ st.markdown(
         box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
         border: 1px solid #E2E8F0;
     }
-
     .result-card h3 {
         margin-top: 0;
         font-size: 13px;
@@ -145,18 +145,8 @@ st.markdown(
         box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
         transition: transform 0.15s ease;
     }
-
     .mail-button:hover { transform: translateY(-1px); }
     .mail-button:active { transform: scale(0.98); }
-
-    /* Reset-knop subtieler */
-    div[data-testid="column"]:last-child .stButton > button {
-        background: white !important;
-        color: #475569 !important;
-        border: 1px solid #E2E8F0 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-        padding: 16px !important;
-    }
 
     /* Status-tekst */
     .status-text {
@@ -166,8 +156,7 @@ st.markdown(
         margin-top: 16px;
     }
 
-    /* Spinner styling */
-    .stSpinner > div { border-color: #3B82F6 !important; }
+    .stSpinner > div { border-color: #DC2626 !important; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -230,7 +219,6 @@ text = speech_to_text(
     key="stt",
 )
 
-# Als er nieuwe spraak is herkend en het verschilt van wat we al hebben
 if text and text != st.session_state.get("raw_text", ""):
     st.session_state["raw_text"] = text
     api_key = get_api_key()
