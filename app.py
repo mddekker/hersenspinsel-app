@@ -189,10 +189,14 @@ components.html(
     let recognition = null;
     let recording = false;
     let fullText = '';
+    let manuallyStopped = false;
 
-    btn.addEventListener('click', () => {
+    function handleTap(e) {
+      if (e) e.preventDefault();
       if (!recording) startRec(); else stopRec();
-    });
+    }
+    btn.addEventListener('click', handleTap);
+    btn.addEventListener('touchend', handleTap);
 
     function startRec() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -202,9 +206,11 @@ components.html(
       }
       recognition = new SR();
       recognition.lang = 'nl-NL';
-      recognition.continuous = true;
+      // continuous=false werkt veel betrouwbaarder op iOS Safari
+      recognition.continuous = false;
       recognition.interimResults = true;
       fullText = '';
+      manuallyStopped = false;
 
       recognition.onresult = (e) => {
         let interim = '';
@@ -217,6 +223,7 @@ components.html(
       };
 
       recognition.onerror = (e) => {
+        if (e.error === 'no-speech' || e.error === 'aborted') return;
         status.textContent = 'Fout: ' + e.error + '. Probeer opnieuw.';
         recording = false;
         btn.textContent = '🎙';
@@ -224,23 +231,35 @@ components.html(
       };
 
       recognition.onend = () => {
-        if (recording) {
-          try { recognition.start(); } catch(e) {}
-        }
+        // Auto-stop na pauze OF handmatig gestopt → verwerken
+        if (recording) finishRec();
       };
 
-      try { recognition.start(); } catch(e) {}
+      try { recognition.start(); } catch(e) {
+        status.textContent = 'Kon niet starten: ' + e.message;
+        return;
+      }
       recording = true;
       btn.textContent = '⏹';
       btn.classList.add('recording');
-      status.textContent = '🔴 Aan het luisteren...';
+      status.textContent = '🔴 Aan het luisteren — tik om te stoppen';
     }
 
     function stopRec() {
-      recording = false;
+      manuallyStopped = true;
+      // Direct verwerken op basis van wat we al hebben
       if (recognition) {
-        try { recognition.stop(); } catch(e) {}
+        try {
+          recognition.onend = null;
+          recognition.onresult = null;
+          recognition.abort();
+        } catch(e) {}
       }
+      finishRec();
+    }
+
+    function finishRec() {
+      recording = false;
       btn.textContent = '⏳';
       btn.classList.remove('recording');
       status.textContent = 'Verwerken...';
@@ -252,7 +271,6 @@ components.html(
         return;
       }
 
-      // Stuur naar Streamlit via query param (parent navigatie)
       const url = new URL(window.parent.location.href);
       url.searchParams.set('spinsel', text);
       window.parent.location.href = url.toString();
