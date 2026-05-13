@@ -5,7 +5,7 @@ import datetime
 import streamlit as st
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "broers.db"
+DB_PATH = Path(__file__).parent / "broers.db"
 
 st.set_page_config(
     page_title="Broers",
@@ -59,39 +59,11 @@ st.markdown("""
         white-space: pre-wrap; word-break: break-word;
         margin-bottom: 12px;
     }
-    .reactions-bar {
-        display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
-    }
-    .reaction-chip {
-        display: inline-flex; align-items: center; gap: 3px;
-        background: #F1F5F9; border-radius: 20px;
-        padding: 4px 10px; font-size: 14px; color: #475569;
-        border: 1px solid #E2E8F0; cursor: pointer;
-    }
-    .reaction-chip.mine {
-        background: #EFF6FF; border-color: #BFDBFE; color: #1D4ED8;
-    }
-    .reaction-count { font-size: 12px; font-weight: 600; }
     .comment-item {
         background: #F8FAFC; border-radius: 12px; padding: 8px 12px;
         margin-top: 6px; font-size: 14px; color: #334155;
     }
     .comment-author { font-weight: 600; color: #0F172A; margin-right: 6px; }
-    .divider { height: 1px; background: #F1F5F9; margin: 8px 0; }
-    .who-badge {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: white; border: 2px solid #E2E8F0; border-radius: 14px;
-        padding: 10px 16px; font-size: 15px; font-weight: 600;
-        color: #0F172A; margin-bottom: 16px; width: 100%;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    }
-    .post-btn > button {
-        background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
-        color: white !important; border: none !important;
-        border-radius: 14px !important; padding: 14px !important;
-        font-size: 16px !important; font-weight: 600 !important;
-        width: 100% !important; box-shadow: 0 4px 14px rgba(99,102,241,0.35) !important;
-    }
     .stButton > button {
         border-radius: 12px !important; font-size: 14px !important;
         padding: 8px 14px !important;
@@ -227,15 +199,12 @@ if "author" not in st.session_state:
     st.session_state["author"] = "Martin"
 if "show_comments" not in st.session_state:
     st.session_state["show_comments"] = {}
-if "comment_text" not in st.session_state:
-    st.session_state["comment_text"] = {}
 
 # ─── Header ─────────────────────────────────────────────────────────────────
 
 st.markdown('<div class="app-title">📸 Broers</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">Tips, foto\'s en video\'s met Martin, Peter & Kasper</div>', unsafe_allow_html=True)
 
-# Wie ben je?
 cols = st.columns(3)
 for i, name in enumerate(["Martin", "Peter", "Kasper"]):
     with cols[i]:
@@ -253,8 +222,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 with st.expander(f"➕  Nieuwe post als {AVATAR[author]} {author}", expanded=False):
     new_content = st.text_area(
-        "Tekst (tip, bericht, idee…)",
-        placeholder="Deel iets met je broers…",
+        "Tekst",
+        placeholder="Deel een tip, bericht of idee…",
         height=100,
         label_visibility="collapsed",
     )
@@ -266,11 +235,9 @@ with st.expander(f"➕  Nieuwe post als {AVATAR[author]} {author}", expanded=Fal
 
     submit_col, _ = st.columns([1, 2])
     with submit_col:
-        post_disabled = not new_content.strip() and uploaded is None
-        if st.button("📤 Posten", disabled=post_disabled, use_container_width=True, type="primary"):
-            media_bytes = None
-            media_mime = None
-            media_type = None
+        if st.button("📤 Posten", disabled=(not new_content.strip() and uploaded is None),
+                     use_container_width=True, type="primary"):
+            media_bytes = media_mime = media_type = None
             if uploaded:
                 media_bytes = uploaded.read()
                 media_mime = uploaded.type
@@ -301,28 +268,22 @@ else:
         comments = get_comments(pid)
         show_comments = st.session_state["show_comments"].get(pid, False)
 
-        # ── Post card (HTML) ──
         avatar_cls = AVATAR_CLASS.get(post["author"], "avatar-martin")
         avatar_icon = AVATAR.get(post["author"], "👤")
-        time_str = format_time(post["created_at"])
 
         header_html = f"""
         <div class="post-card">
           <div class="post-header">
             <div class="avatar {avatar_cls}">{avatar_icon}</div>
-            <div>
-              <div class="author-name">{post["author"]}</div>
-            </div>
-            <div class="post-time">{time_str}</div>
+            <div><div class="author-name">{post["author"]}</div></div>
+            <div class="post-time">{format_time(post["created_at"])}</div>
           </div>
         """
         if post["content"]:
             header_html += f'<div class="post-content">{post["content"]}</div>'
         header_html += "</div>"
-
         st.markdown(header_html, unsafe_allow_html=True)
 
-        # ── Media ──
         if post["media_data"]:
             if post["media_type"] == "video":
                 st.video(post["media_data"])
@@ -330,49 +291,43 @@ else:
                 img_b64 = base64.b64encode(post["media_data"]).decode()
                 mime = post["media_mime"] or "image/jpeg"
                 st.markdown(
-                    f'<img src="data:{mime};base64,{img_b64}" style="width:100%;border-radius:14px;margin-bottom:10px;" />',
+                    f'<img src="data:{mime};base64,{img_b64}" '
+                    f'style="width:100%;border-radius:14px;margin-bottom:10px;" />',
                     unsafe_allow_html=True,
                 )
 
-        # ── Reactions row ──
         reaction_cols = st.columns(len(EMOJIS) + 1)
         for i, emoji in enumerate(EMOJIS):
             count = reactions.get(emoji, 0)
             mine = author in authors_per_emoji.get(emoji, [])
-            label = f"{emoji} {count}" if count else emoji
             with reaction_cols[i]:
-                if st.button(label, key=f"react_{pid}_{emoji}",
-                             use_container_width=True,
-                             type="primary" if mine else "secondary"):
+                if st.button(
+                    f"{emoji} {count}" if count else emoji,
+                    key=f"react_{pid}_{emoji}",
+                    use_container_width=True,
+                    type="primary" if mine else "secondary",
+                ):
                     toggle_reaction(pid, author, emoji)
                     st.rerun()
 
-        # ── Comments toggle ──
         n_comments = len(comments)
-        comment_label = f"💬 {n_comments}" if n_comments else "💬"
         with reaction_cols[-1]:
-            if st.button(comment_label, key=f"toggle_comments_{pid}", use_container_width=True):
+            if st.button(f"💬 {n_comments}" if n_comments else "💬",
+                         key=f"toggle_comments_{pid}", use_container_width=True):
                 st.session_state["show_comments"][pid] = not show_comments
                 st.rerun()
 
-        # ── Comments section ──
         if show_comments:
-            if comments:
-                for c in comments:
-                    st.markdown(
-                        f'<div class="comment-item">'
-                        f'<span class="comment-author">{AVATAR.get(c["author"], "👤")} {c["author"]}</span>'
-                        f'{c["content"]}'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-
-            comment_key = f"comment_input_{pid}"
+            for c in comments:
+                st.markdown(
+                    f'<div class="comment-item">'
+                    f'<span class="comment-author">{AVATAR.get(c["author"], "👤")} {c["author"]}</span>'
+                    f'{c["content"]}</div>',
+                    unsafe_allow_html=True,
+                )
             new_comment = st.text_input(
-                "Reageer…",
-                key=comment_key,
-                placeholder="Typ je reactie…",
-                label_visibility="collapsed",
+                "Reageer…", key=f"comment_input_{pid}",
+                placeholder="Typ je reactie…", label_visibility="collapsed",
             )
             send_col, _ = st.columns([1, 3])
             with send_col:
