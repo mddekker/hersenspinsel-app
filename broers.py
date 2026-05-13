@@ -110,6 +110,18 @@ def init_db():
                 content    TEXT NOT NULL,
                 created_at REAL NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS suggestions (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                author     TEXT NOT NULL,
+                content    TEXT NOT NULL,
+                created_at REAL NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS suggestion_votes (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                suggestion_id INTEGER NOT NULL,
+                author        TEXT NOT NULL,
+                UNIQUE(suggestion_id, author)
+            );
         """)
 
 
@@ -167,6 +179,42 @@ def get_comments(post_id):
         return conn.execute(
             "SELECT * FROM comments WHERE post_id=? ORDER BY created_at ASC", (post_id,)
         ).fetchall()
+
+
+def add_suggestion(author, content):
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO suggestions (author, content, created_at) VALUES (?,?,?)",
+            (author, content, time.time()),
+        )
+
+
+def get_suggestions():
+    with get_db() as conn:
+        return conn.execute("SELECT * FROM suggestions ORDER BY created_at DESC").fetchall()
+
+
+def toggle_suggestion_vote(suggestion_id, author):
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT id FROM suggestion_votes WHERE suggestion_id=? AND author=?",
+            (suggestion_id, author),
+        ).fetchone()
+        if existing:
+            conn.execute("DELETE FROM suggestion_votes WHERE id=?", (existing["id"],))
+        else:
+            conn.execute(
+                "INSERT INTO suggestion_votes (suggestion_id, author) VALUES (?,?)",
+                (suggestion_id, author),
+            )
+
+
+def get_suggestion_votes(suggestion_id):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT author FROM suggestion_votes WHERE suggestion_id=?", (suggestion_id,)
+        ).fetchall()
+    return [r["author"] for r in rows]
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
@@ -337,3 +385,69 @@ else:
                         st.rerun()
 
         st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
+
+# ─── Verbeteringen ───────────────────────────────────────────────────────────
+
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("""
+<div style="height:1px;background:#E2E8F0;margin-bottom:24px;"></div>
+<div style="font-size:18px;font-weight:700;color:#0F172A;margin-bottom:4px;">🛠️ Verbeter de app</div>
+<div style="font-size:13px;color:#64748B;margin-bottom:16px;">
+  Mis je iets? Heb je een idee? Zet het hier neer — de anderen kunnen erop stemmen.
+</div>
+""", unsafe_allow_html=True)
+
+with st.expander("➕  Nieuw idee insturen", expanded=False):
+    suggestion_text = st.text_area(
+        "Idee",
+        placeholder="Bijv. 'Donkere modus', 'Zoekfunctie', 'Notificaties'…",
+        height=80,
+        label_visibility="collapsed",
+        key="suggestion_input",
+    )
+    s_col, _ = st.columns([1, 2])
+    with s_col:
+        if st.button("💡 Insturen", disabled=not suggestion_text.strip(),
+                     use_container_width=True, type="primary", key="submit_suggestion"):
+            add_suggestion(author, suggestion_text.strip())
+            st.success("Idee ingediend!")
+            time.sleep(0.5)
+            st.rerun()
+
+suggestions = get_suggestions()
+if not suggestions:
+    st.markdown(
+        '<div style="text-align:center;padding:24px;color:#94A3B8;font-size:14px;">'
+        "Nog geen ideeën. Wees de eerste!</div>",
+        unsafe_allow_html=True,
+    )
+else:
+    for s in suggestions:
+        sid = s["id"]
+        voters = get_suggestion_votes(sid)
+        voted = author in voters
+        n_votes = len(voters)
+        voter_names = ", ".join(voters) if voters else ""
+
+        st.markdown(f"""
+        <div class="post-card" style="margin-bottom:10px;">
+          <div class="post-header">
+            <div class="avatar {AVATAR_CLASS.get(s['author'], 'avatar-martin')}">{AVATAR.get(s['author'], '👤')}</div>
+            <div><div class="author-name">{s['author']}</div></div>
+            <div class="post-time">{format_time(s['created_at'])}</div>
+          </div>
+          <div class="post-content" style="margin-bottom:4px;">{s['content']}</div>
+          {"<div style='font-size:12px;color:#94A3B8;margin-bottom:8px;'>👍 " + voter_names + "</div>" if voter_names else ""}
+        </div>
+        """, unsafe_allow_html=True)
+
+        vote_col, _ = st.columns([1, 3])
+        with vote_col:
+            if st.button(
+                f"{'✓ ' if voted else ''}👍 {n_votes}" if n_votes else ("✓ 👍" if voted else "👍"),
+                key=f"vote_{sid}",
+                use_container_width=True,
+                type="primary" if voted else "secondary",
+            ):
+                toggle_suggestion_vote(sid, author)
+                st.rerun()
