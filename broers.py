@@ -23,67 +23,163 @@ st.set_page_config(
 )
 
 st.html("""
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; }
+
 #MainMenu, footer, header, .stDeployButton,
 [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
-html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"],
-[data-testid="stMain"] { background: #080808 !important; color: #F1F0EC; }
-body { font-family: 'Inter', -apple-system, sans-serif !important; }
-.block-container { padding-top: 0 !important; padding-bottom: 80px !important; max-width: 480px !important; }
-.login-logo { font-size: 64px; text-align: center; margin-bottom: 6px; }
+
+html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], [data-testid="stMain"] {
+    background: #05050A !important; color: #EDE8D8;
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* ── Nacht-sfeer achtergrond ── */
+[data-testid="stApp"]::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+        radial-gradient(ellipse 100% 50% at 50% -10%, rgba(180,10,10,0.22) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(160,120,0,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 30% at 0% 60%, rgba(100,0,0,0.10) 0%, transparent 50%);
+}
+
+.block-container {
+    padding-top: 0 !important; padding-bottom: 80px !important;
+    max-width: 480px !important; position: relative; z-index: 1;
+}
+
+/* ── Login ── */
+.login-scene {
+    text-align: center; padding: 48px 0 32px;
+    background: linear-gradient(180deg, #1a0000 0%, #05050A 100%);
+    margin: -1rem -1rem 32px; border-bottom: 1px solid #1a0000;
+}
+.login-icon { font-size: 80px; display: block; margin-bottom: 8px; }
 .login-title {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 56px; font-weight: 900;
-    letter-spacing: 2px; text-transform: uppercase; text-align: center;
-    background: linear-gradient(135deg, #FFD700 0%, #FF4500 60%, #CC0000 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 88px; letter-spacing: 8px; line-height: 0.9;
+    background: linear-gradient(180deg, #FFE566 0%, #FFB800 40%, #CC4400 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    display: block; margin-bottom: 10px;
 }
-.login-sub { font-size: 13px; color: #555; text-align: center; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 44px; }
+.login-tagline {
+    font-size: 11px; letter-spacing: 5px; text-transform: uppercase;
+    color: #3a2a2a; margin-bottom: 36px;
+}
+.login-deco {
+    font-size: 28px; letter-spacing: 12px; opacity: 0.35;
+    margin-bottom: 32px; display: block;
+}
+
+/* ── App header ── */
 .app-header {
-    background: linear-gradient(135deg, #1a0000, #2d0000, #1a0800);
-    border-bottom: 2px solid #CC0000; padding: 18px 24px 20px; margin-bottom: 24px;
-    box-shadow: 0 4px 32px rgba(200,0,0,0.3);
+    background: linear-gradient(135deg, #130000 0%, #200000 50%, #0d0500 100%);
+    border-bottom: 1px solid #2a0000;
+    padding: 16px 20px 18px; margin-bottom: 20px;
+    box-shadow: 0 8px 40px rgba(160,0,0,0.25);
+    position: relative; overflow: hidden;
 }
-.app-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.app-header::before {
+    content: '🏎️💨';
+    position: absolute; right: -4px; top: 50%; transform: translateY(-50%);
+    font-size: 52px; opacity: 0.12; letter-spacing: -4px;
+}
+.app-header-top { display: flex; align-items: center; justify-content: space-between; }
 .app-header-title {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900;
-    letter-spacing: 3px; text-transform: uppercase; color: #FFD700;
+    font-family: 'Bebas Neue', sans-serif; font-size: 38px; letter-spacing: 5px;
+    background: linear-gradient(135deg, #FFE566, #FFB800);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 .app-header-user {
-    font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-    background: rgba(204,0,0,0.3); border: 1px solid rgba(204,0,0,0.5);
-    border-radius: 6px; padding: 4px 10px; color: #FF6666;
+    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    background: rgba(180,0,0,0.25); border: 1px solid #5a0000;
+    border-radius: 4px; padding: 5px 11px; color: #FF7070;
 }
-.app-header-sub { font-size: 11px; color: #4a3a2a; letter-spacing: 2px; text-transform: uppercase; }
+.app-header-sub {
+    font-size: 10px; color: #2d1a1a; letter-spacing: 3px;
+    text-transform: uppercase; margin-top: 2px;
+}
+
+/* ── Cards ── */
 .card {
-    background: #111; border: 1px solid #222; border-left: 3px solid #CC0000;
-    border-radius: 4px 16px 16px 4px; padding: 18px 20px; margin-bottom: 14px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    background: linear-gradient(135deg, #0e0e0e 0%, #0a0a0a 100%);
+    border: 1px solid #1c1c1c;
+    border-top: 1px solid #252525;
+    border-radius: 16px; padding: 20px; margin-bottom: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,220,100,0.04);
+    position: relative; overflow: hidden;
 }
-.card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.avi { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
-.avi-martin { background: linear-gradient(135deg, #7B0000, #CC0000); }
-.avi-peter  { background: linear-gradient(135deg, #7B5C00, #CC9900); }
-.avi-kasper { background: linear-gradient(135deg, #4B0000, #990000); }
-.card-author { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: 1px; text-transform: uppercase; color: #F1F0EC; }
-.card-time { font-size: 11px; color: #333; margin-left: auto; }
-.card-body { font-size: 15px; color: #AAA; line-height: 1.6; white-space: pre-wrap; word-break: break-word; margin-bottom: 14px; }
-.section-title { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #FFD700; margin: 36px 0 2px; }
-.section-sub { font-size: 12px; color: #444; margin-bottom: 16px; letter-spacing: 1px; text-transform: uppercase; }
-.vote-chip { font-size: 12px; color: #555; margin-top: 4px; }
+.card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, #FFB800, #CC0000);
+}
+.card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.avi {
+    width: 52px; height: 52px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; flex-shrink: 0; border: 1px solid #2a2a2a;
+}
+.avi-martin { background: linear-gradient(135deg, #5a0000, #AA0000); box-shadow: 0 4px 16px rgba(170,0,0,0.4); }
+.avi-peter  { background: linear-gradient(135deg, #5a4200, #AA7D00); box-shadow: 0 4px 16px rgba(170,125,0,0.4); }
+.avi-kasper { background: linear-gradient(135deg, #3a0033, #880077); box-shadow: 0 4px 16px rgba(136,0,119,0.4); }
+
+.card-author {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; letter-spacing: 3px; color: #EDE8D8;
+    text-shadow: 0 2px 12px rgba(255,180,0,0.15);
+    line-height: 1;
+}
+.card-time { font-size: 10px; color: #2a2a2a; margin-left: auto; letter-spacing: 1px; align-self: flex-start; padding-top: 4px; }
+.card-body { font-size: 15px; color: #888; line-height: 1.65; white-space: pre-wrap; word-break: break-word; margin-bottom: 14px; padding-left: 4px; }
+
+/* ── Decoratieve scheidingslijn ── */
+.vibe-strip {
+    text-align: center; font-size: 18px; letter-spacing: 8px;
+    opacity: 0.15; margin: 28px 0 4px;
+}
+
+/* ── Section titles ── */
+.section-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 40px; letter-spacing: 4px;
+    background: linear-gradient(135deg, #FFE566, #FFB800);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin: 12px 0 2px;
+}
+.section-sub { font-size: 11px; color: #333; margin-bottom: 16px; letter-spacing: 2px; text-transform: uppercase; }
+.vote-chip { font-size: 12px; color: #444; margin-top: 4px; }
+
+/* ── Streamlit overrides ── */
 .stTextInput > div > div > input, .stTextArea > div > div > textarea {
-    background: #111 !important; border: 1px solid #333 !important; border-radius: 8px !important; color: #F1F0EC !important;
+    background: #0d0d0d !important; border: 1px solid #222 !important;
+    border-radius: 10px !important; color: #EDE8D8 !important;
+    font-family: 'Inter', sans-serif !important; font-size: 15px !important;
 }
-.stTextInput > div > div > input::placeholder, .stTextArea > div > div > textarea::placeholder { color: #444 !important; }
-.stButton > button { border-radius: 8px !important; font-weight: 600 !important; border: 1px solid #2a2a2a !important; background: #111 !important; color: #888 !important; }
-.stButton > button[kind="primary"] { background: linear-gradient(135deg, #8B0000, #CC0000) !important; border: none !important; color: #FFD700 !important; font-weight: 700 !important; box-shadow: 0 4px 16px rgba(180,0,0,0.4) !important; }
-.stExpander { background: #0d0d0d !important; border: 1px solid #222 !important; border-radius: 12px !important; }
-.stExpander summary { color: #CC0000 !important; font-weight: 700 !important; }
-label { color: #444 !important; font-size: 12px !important; }
-[data-testid="stFileUploadDropzone"] { background: #0d0d0d !important; }
-</style>
-""")
+.stTextInput > div > div > input::placeholder,
+.stTextArea > div > div > textarea::placeholder { color: #333 !important; }
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: #8B0000 !important; box-shadow: 0 0 0 2px rgba(140,0,0,0.2) !important;
+}
+.stButton > button {
+    border-radius: 10px !important; font-weight: 600 !important; font-size: 13px !important;
+    border: 1px solid #1e1e1e !important; background: #0d0d0d !important; color: #555 !important;
+}
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #7B0000, #CC0000) !important;
+    border: none !important; color: #FFE566 !important;
+    font-family: 'Bebas Neue', sans-serif !important;
+    font-size: 17px !important; letter-spacing: 2px !important;
+    box-shadow: 0 6px 20px rgba(160,0,0,0.45) !important;
+}
+.stExpander { background: #0a0a0a !important; border: 1px solid #1a1a1a !important; border-radius: 12px !important; }
+.stExpander summary { color: #8B0000 !important; font-weight: 700 !important; font-size: 14px !important; }
+label { color: #333 !important; font-size: 12px !important; }
+[data-testid="stFileUploadDropzone"] { background: #0a0a0a !important; border-color: #1a1a1a !important; }
+.stAlert { border-radius: 10px !important; }
+</style>""")
 
 
 # ─── Database ────────────────────────────────────────────────────────────────
@@ -257,10 +353,12 @@ if "show_comments" not in st.session_state:
 
 if not st.session_state["user"]:
     st.markdown("""
-    <div style="height:32px"></div>
-    <div class="login-logo">🏎️</div>
-    <div class="login-title">Broers</div>
-    <div class="login-sub">Exclusief — Martin · Peter · Kasper</div>
+    <div class="login-scene">
+      <span class="login-icon">🏎️</span>
+      <span class="login-title">BROERS</span>
+      <span class="login-deco">💃 🥂 🏁</span>
+      <span class="login-tagline">Alleen voor Martin &nbsp;·&nbsp; Peter &nbsp;·&nbsp; Kasper</span>
+    </div>
     """, unsafe_allow_html=True)
 
     if "login_name" not in st.session_state:
@@ -305,10 +403,10 @@ author = st.session_state["user"]
 st.markdown(f"""
 <div class="app-header">
   <div class="app-header-top">
-    <div class="app-header-title">🏎️ &nbsp;Broers</div>
-    <div class="app-header-user">{AVI[author]} &nbsp;{author.upper()}</div>
+    <div class="app-header-title">BROERS</div>
+    <div class="app-header-user">{AVI[author]} {author.upper()}</div>
   </div>
-  <div class="app-header-sub">🍸 &nbsp;Tips &nbsp;·&nbsp; Foto's &nbsp;·&nbsp; Video's</div>
+  <div class="app-header-sub">💃 &nbsp; Tips · Foto's · Video's · Avonturen &nbsp; 🥂</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -438,9 +536,10 @@ else:
 # ─── Verbeteringen ───────────────────────────────────────────────────────────
 
 st.markdown("""
-<div style="height:1px;background:rgba(255,255,255,0.08);margin:32px 0 0;"></div>
-<div class="section-title">🛠️ Verbeter de app</div>
-<div class="section-sub">Idee? Stuur het in. De anderen kunnen stemmen.</div>
+<div class="vibe-strip">🏎️ 💃 🥂 🏁 💃 🏎️</div>
+<div style="height:1px;background:linear-gradient(90deg,transparent,#3a0000,transparent);margin-bottom:24px;"></div>
+<div class="section-title">VERBETER DE APP</div>
+<div class="section-sub">Idee? Stuur het in — de anderen stemmen mee.</div>
 """, unsafe_allow_html=True)
 
 with st.expander("➕  Nieuw idee", expanded=False):
