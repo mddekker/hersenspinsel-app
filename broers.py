@@ -8,6 +8,46 @@ from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "broers.db"
 
+# ─── Database backend: Supabase (PostgreSQL) of lokale SQLite ────────────────
+def _pg_url():
+    try:
+        return st.secrets["DATABASE_URL"]
+    except Exception:
+        return None
+
+def get_db():
+    url = _pg_url()
+    if url:
+        import psycopg2
+        conn = psycopg2.connect(url, sslmode="require")
+        return conn
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def _q(sql):
+    """Convert SQLite ? placeholders to %s for PostgreSQL."""
+    if _pg_url():
+        return sql.replace("?", "%s")
+    return sql
+
+def _rows(cursor):
+    """Return results as list of dicts regardless of backend."""
+    if _pg_url():
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    return [dict(r) for r in cursor.fetchall()]
+
+def _one(cursor):
+    if _pg_url():
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        cols = [d[0] for d in cursor.description]
+        return dict(zip(cols, row))
+    row = cursor.fetchone()
+    return dict(row) if row else None
+
 # ─── Inlogcodes ──────────────────────────────────────────────────────────────
 CODES = {
     "Martin": "1234",
@@ -191,79 +231,115 @@ def get_db():
 
 
 def init_db():
-    with get_db() as conn:
-        conn.executescript("""
+    pg = _pg_url()
+    conn = get_db()
+    cur = conn.cursor()
+    if pg:
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS posts (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                id         SERIAL PRIMARY KEY,
                 author     TEXT NOT NULL,
                 content    TEXT,
-                media_data BLOB,
+                media_data BYTEA,
                 media_mime TEXT,
                 media_type TEXT,
-                created_at REAL NOT NULL
-            );
+                created_at DOUBLE PRECISION NOT NULL
+            )""")
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS reactions (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                post_id    INTEGER NOT NULL,
-                author     TEXT NOT NULL,
-                emoji      TEXT NOT NULL,
+                id      SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL,
+                author  TEXT NOT NULL,
+                emoji   TEXT NOT NULL,
                 UNIQUE(post_id, author, emoji)
-            );
+            )""")
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS comments (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                id         SERIAL PRIMARY KEY,
                 post_id    INTEGER NOT NULL,
                 author     TEXT NOT NULL,
                 content    TEXT NOT NULL,
-                created_at REAL NOT NULL
-            );
+                created_at DOUBLE PRECISION NOT NULL
+            )""")
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS suggestions (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                id         SERIAL PRIMARY KEY,
                 author     TEXT NOT NULL,
                 content    TEXT NOT NULL,
-                created_at REAL NOT NULL
-            );
+                created_at DOUBLE PRECISION NOT NULL
+            )""")
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS suggestion_votes (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                id            SERIAL PRIMARY KEY,
                 suggestion_id INTEGER NOT NULL,
                 author        TEXT NOT NULL,
                 UNIQUE(suggestion_id, author)
-            );
+            )""")
+        conn.commit()
+    else:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, author TEXT NOT NULL,
+                content TEXT, media_data BLOB, media_mime TEXT, media_type TEXT,
+                created_at REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS reactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER NOT NULL,
+                author TEXT NOT NULL, emoji TEXT NOT NULL,
+                UNIQUE(post_id, author, emoji));
+            CREATE TABLE IF NOT EXISTS comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER NOT NULL,
+                author TEXT NOT NULL, content TEXT NOT NULL, created_at REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS suggestions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, author TEXT NOT NULL,
+                content TEXT NOT NULL, created_at REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS suggestion_votes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, suggestion_id INTEGER NOT NULL,
+                author TEXT NOT NULL, UNIQUE(suggestion_id, author));
         """)
+    conn.close()
 
 
 def add_post(author, content, media_bytes, media_mime, media_type):
-    with get_db() as conn:
-        conn.execute(
-            "INSERT INTO posts (author,content,media_data,media_mime,media_type,created_at) VALUES (?,?,?,?,?,?)",
-            (author, content, media_bytes, media_mime, media_type, time.time()),
-        )
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        _q("INSERT INTO posts (author,content,media_data,media_mime,media_type,created_at) VALUES (?,?,?,?,?,?)"),
+        (author, content, media_bytes, media_mime, media_type, time.time()),
+    )
+    conn.commit()
+    conn.close()
 
 
 def get_posts():
-    with get_db() as conn:
-        return conn.execute("SELECT * FROM posts ORDER BY created_at DESC").fetchall()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM posts ORDER BY created_at DESC")
+    rows = _rows(cur)
+    conn.close()
+    return rows
 
 
 def toggle_reaction(post_id, author, emoji):
-    with get_db() as conn:
-        row = conn.execute(
-            "SELECT id FROM reactions WHERE post_id=? AND author=? AND emoji=?",
-            (post_id, author, emoji),
-        ).fetchone()
-        if row:
-            conn.execute("DELETE FROM reactions WHERE id=?", (row["id"],))
-        else:
-            conn.execute(
-                "INSERT INTO reactions (post_id,author,emoji) VALUES (?,?,?)",
-                (post_id, author, emoji),
-            )
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(_q("SELECT id FROM reactions WHERE post_id=? AND author=? AND emoji=?"),
+                (post_id, author, emoji))
+    row = _one(cur)
+    if row:
+        cur.execute(_q("DELETE FROM reactions WHERE id=?"), (row["id"],))
+    else:
+        cur.execute(_q("INSERT INTO reactions (post_id,author,emoji) VALUES (?,?,?)"),
+                    (post_id, author, emoji))
+    conn.commit()
+    conn.close()
 
 
 def get_reactions(post_id):
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT emoji, author FROM reactions WHERE post_id=?", (post_id,)
-        ).fetchall()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(_q("SELECT emoji, author FROM reactions WHERE post_id=?"), (post_id,))
+    rows = _rows(cur)
+    conn.close()
     counts, by_emoji = {}, {}
     for r in rows:
         counts[r["emoji"]] = counts.get(r["emoji"], 0) + 1
@@ -272,53 +348,62 @@ def get_reactions(post_id):
 
 
 def add_comment(post_id, author, content):
-    with get_db() as conn:
-        conn.execute(
-            "INSERT INTO comments (post_id,author,content,created_at) VALUES (?,?,?,?)",
-            (post_id, author, content, time.time()),
-        )
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(_q("INSERT INTO comments (post_id,author,content,created_at) VALUES (?,?,?,?)"),
+                (post_id, author, content, time.time()))
+    conn.commit()
+    conn.close()
 
 
 def get_comments(post_id):
-    with get_db() as conn:
-        return conn.execute(
-            "SELECT * FROM comments WHERE post_id=? ORDER BY created_at ASC", (post_id,)
-        ).fetchall()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(_q("SELECT * FROM comments WHERE post_id=? ORDER BY created_at ASC"), (post_id,))
+    rows = _rows(cur)
+    conn.close()
+    return rows
 
 
 def add_suggestion(author, content):
-    with get_db() as conn:
-        conn.execute(
-            "INSERT INTO suggestions (author,content,created_at) VALUES (?,?,?)",
-            (author, content, time.time()),
-        )
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(_q("INSERT INTO suggestions (author,content,created_at) VALUES (?,?,?)"),
+                (author, content, time.time()))
+    conn.commit()
+    conn.close()
 
 
 def get_suggestions():
-    with get_db() as conn:
-        return conn.execute("SELECT * FROM suggestions ORDER BY created_at DESC").fetchall()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM suggestions ORDER BY created_at DESC")
+    rows = _rows(cur)
+    conn.close()
+    return rows
 
 
 def toggle_vote(suggestion_id, author):
-    with get_db() as conn:
-        row = conn.execute(
-            "SELECT id FROM suggestion_votes WHERE suggestion_id=? AND author=?",
-            (suggestion_id, author),
-        ).fetchone()
-        if row:
-            conn.execute("DELETE FROM suggestion_votes WHERE id=?", (row["id"],))
-        else:
-            conn.execute(
-                "INSERT INTO suggestion_votes (suggestion_id,author) VALUES (?,?)",
-                (suggestion_id, author),
-            )
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(_q("SELECT id FROM suggestion_votes WHERE suggestion_id=? AND author=?"),
+                (suggestion_id, author))
+    row = _one(cur)
+    if row:
+        cur.execute(_q("DELETE FROM suggestion_votes WHERE id=?"), (row["id"],))
+    else:
+        cur.execute(_q("INSERT INTO suggestion_votes (suggestion_id,author) VALUES (?,?)"),
+                    (suggestion_id, author))
+    conn.commit()
+    conn.close()
 
 
 def get_voters(suggestion_id):
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT author FROM suggestion_votes WHERE suggestion_id=?", (suggestion_id,)
-        ).fetchall()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(_q("SELECT author FROM suggestion_votes WHERE suggestion_id=?"), (suggestion_id,))
+    rows = _rows(cur)
+    conn.close()
     return [r["author"] for r in rows]
 
 
