@@ -3,6 +3,7 @@ import base64
 import time
 import datetime
 import streamlit as st
+import streamlit.components.v1 as components
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "broers.db"
@@ -21,201 +22,68 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-st.markdown("""
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Broers">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+st.html("""
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-
 * { box-sizing: border-box; }
-
 #MainMenu, footer, header, .stDeployButton,
 [data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
-
-html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
-    background: #080808 !important;
-    font-family: 'Inter', -apple-system, sans-serif !important;
-    color: #F1F0EC;
-}
-[data-testid="stMain"] { background: #080808 !important; }
-
-/* animated speed-lines bg */
-body::before {
-    content: '';
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background:
-        repeating-linear-gradient(
-            105deg,
-            transparent 0px,
-            transparent 120px,
-            rgba(200,160,60,0.025) 121px,
-            rgba(200,160,60,0.025) 122px
-        ),
-        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(180,20,20,0.18) 0%, transparent 70%),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(180,140,0,0.10) 0%, transparent 60%);
-}
-
-.block-container {
-    padding-top: 0 !important;
-    padding-bottom: 80px !important;
-    max-width: 480px !important;
-    position: relative; z-index: 1;
-}
-
-/* ── Login ── */
-.login-logo {
-    font-size: 64px; text-align: center; margin-bottom: 6px;
-    filter: drop-shadow(0 0 24px rgba(220,40,40,0.6));
-}
+html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"],
+[data-testid="stMain"] { background: #080808 !important; color: #F1F0EC; }
+body { font-family: 'Inter', -apple-system, sans-serif !important; }
+.block-container { padding-top: 0 !important; padding-bottom: 80px !important; max-width: 480px !important; }
+.login-logo { font-size: 64px; text-align: center; margin-bottom: 6px; }
 .login-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 56px; font-weight: 900; letter-spacing: 2px;
-    text-transform: uppercase; text-align: center;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 56px; font-weight: 900;
+    letter-spacing: 2px; text-transform: uppercase; text-align: center;
     background: linear-gradient(135deg, #FFD700 0%, #FF4500 60%, #CC0000 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    margin-bottom: 4px;
-    text-shadow: none;
-    filter: drop-shadow(0 2px 8px rgba(255,100,0,0.3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px;
 }
-.login-sub {
-    font-size: 13px; color: #555; text-align: center;
-    text-transform: uppercase; letter-spacing: 3px; margin-bottom: 44px;
-}
-
-/* ── App header ── */
+.login-sub { font-size: 13px; color: #555; text-align: center; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 44px; }
 .app-header {
-    background: linear-gradient(135deg, #1a0000 0%, #2d0000 40%, #1a0800 100%);
-    border-bottom: 2px solid #CC0000;
-    padding: 18px 24px 20px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 32px rgba(200,0,0,0.3), 0 0 80px rgba(200,0,0,0.08);
-    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #1a0000, #2d0000, #1a0800);
+    border-bottom: 2px solid #CC0000; padding: 18px 24px 20px; margin-bottom: 24px;
+    box-shadow: 0 4px 32px rgba(200,0,0,0.3);
 }
-.app-header::after {
-    content: '🏎️';
-    position: absolute; right: -10px; bottom: -8px;
-    font-size: 80px; opacity: 0.07; transform: scaleX(-1);
-}
-.app-header-top {
-    display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;
-}
+.app-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
 .app-header-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 28px; font-weight: 900; letter-spacing: 3px;
-    text-transform: uppercase; color: #FFD700;
-    text-shadow: 0 0 20px rgba(255,215,0,0.4);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900;
+    letter-spacing: 3px; text-transform: uppercase; color: #FFD700;
 }
 .app-header-user {
-    font-size: 12px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase;
-    background: rgba(204,0,0,0.3);
-    border: 1px solid rgba(204,0,0,0.5);
+    font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    background: rgba(204,0,0,0.3); border: 1px solid rgba(204,0,0,0.5);
     border-radius: 6px; padding: 4px 10px; color: #FF6666;
 }
-.app-header-sub {
-    font-size: 11px; color: #4a3a2a; letter-spacing: 2px; text-transform: uppercase;
-}
-
-/* ── Cards ── */
+.app-header-sub { font-size: 11px; color: #4a3a2a; letter-spacing: 2px; text-transform: uppercase; }
 .card {
-    background: linear-gradient(135deg, #111111 0%, #0e0e0e 100%);
-    border: 1px solid #222;
-    border-left: 3px solid #CC0000;
-    border-radius: 4px 16px 16px 4px;
-    padding: 18px 20px;
-    margin-bottom: 14px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+    background: #111; border: 1px solid #222; border-left: 3px solid #CC0000;
+    border-radius: 4px 16px 16px 4px; padding: 18px 20px; margin-bottom: 14px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
 }
-.card-header {
-    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
-}
-.avi {
-    width: 40px; height: 40px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
-}
+.card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.avi { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
 .avi-martin { background: linear-gradient(135deg, #7B0000, #CC0000); }
 .avi-peter  { background: linear-gradient(135deg, #7B5C00, #CC9900); }
 .avi-kasper { background: linear-gradient(135deg, #4B0000, #990000); }
-.card-author {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700; font-size: 17px; letter-spacing: 1px;
-    text-transform: uppercase; color: #F1F0EC;
-}
-.card-time { font-size: 11px; color: #333; margin-left: auto; letter-spacing: 1px; }
-.card-body {
-    font-size: 15px; color: #AAA; line-height: 1.6;
-    white-space: pre-wrap; word-break: break-word;
-    margin-bottom: 14px;
-}
-
-/* ── Suggestions ── */
-.section-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 26px; font-weight: 900; letter-spacing: 2px;
-    text-transform: uppercase; color: #FFD700;
-    margin: 36px 0 2px;
-    text-shadow: 0 0 16px rgba(255,215,0,0.3);
-}
+.card-author { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: 1px; text-transform: uppercase; color: #F1F0EC; }
+.card-time { font-size: 11px; color: #333; margin-left: auto; }
+.card-body { font-size: 15px; color: #AAA; line-height: 1.6; white-space: pre-wrap; word-break: break-word; margin-bottom: 14px; }
+.section-title { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #FFD700; margin: 36px 0 2px; }
 .section-sub { font-size: 12px; color: #444; margin-bottom: 16px; letter-spacing: 1px; text-transform: uppercase; }
 .vote-chip { font-size: 12px; color: #555; margin-top: 4px; }
-
-/* ── Streamlit overrides ── */
-.stTextInput > div > div > input,
-.stTextArea > div > div > textarea {
-    background: #111 !important;
-    border: 1px solid #333 !important;
-    border-radius: 8px !important;
-    color: #F1F0EC !important;
-    font-family: 'Inter', sans-serif !important;
+.stTextInput > div > div > input, .stTextArea > div > div > textarea {
+    background: #111 !important; border: 1px solid #333 !important; border-radius: 8px !important; color: #F1F0EC !important;
 }
-.stTextInput > div > div > input::placeholder,
-.stTextArea > div > div > textarea::placeholder { color: #444 !important; }
-.stTextInput > div > div > input:focus,
-.stTextArea > div > div > textarea:focus {
-    border-color: #CC0000 !important;
-    box-shadow: 0 0 0 2px rgba(204,0,0,0.2) !important;
-}
-
-.stButton > button {
-    border-radius: 8px !important;
-    font-family: 'Inter', sans-serif !important;
-    font-weight: 600 !important;
-    font-size: 13px !important;
-    border: 1px solid #2a2a2a !important;
-    background: #111 !important;
-    color: #888 !important;
-    letter-spacing: 0.5px;
-}
-.stButton > button:hover {
-    background: #1a1a1a !important;
-    border-color: #444 !important;
-    color: #CCC !important;
-}
-.stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #8B0000, #CC0000) !important;
-    border: none !important;
-    color: #FFD700 !important;
-    font-weight: 700 !important;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    box-shadow: 0 4px 16px rgba(180,0,0,0.4) !important;
-}
-.stExpander {
-    background: #0d0d0d !important;
-    border: 1px solid #222 !important;
-    border-radius: 12px !important;
-}
-.stExpander summary { color: #CC0000 !important; font-weight: 700 !important; letter-spacing: 0.5px; }
-label, .stTextArea label, .stTextInput label { color: #444 !important; font-size: 12px !important; }
+.stTextInput > div > div > input::placeholder, .stTextArea > div > div > textarea::placeholder { color: #444 !important; }
+.stButton > button { border-radius: 8px !important; font-weight: 600 !important; border: 1px solid #2a2a2a !important; background: #111 !important; color: #888 !important; }
+.stButton > button[kind="primary"] { background: linear-gradient(135deg, #8B0000, #CC0000) !important; border: none !important; color: #FFD700 !important; font-weight: 700 !important; box-shadow: 0 4px 16px rgba(180,0,0,0.4) !important; }
+.stExpander { background: #0d0d0d !important; border: 1px solid #222 !important; border-radius: 12px !important; }
+.stExpander summary { color: #CC0000 !important; font-weight: 700 !important; }
+label { color: #444 !important; font-size: 12px !important; }
 [data-testid="stFileUploadDropzone"] { background: #0d0d0d !important; }
-.stAlert { border-radius: 8px !important; }
-
-/* password input eye icon */
-[data-testid="stTextInput"] button { color: #555 !important; }
 </style>
-""", unsafe_allow_html=True)
+""")
 
 
 # ─── Database ────────────────────────────────────────────────────────────────
