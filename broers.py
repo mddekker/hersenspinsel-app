@@ -7,6 +7,13 @@ from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "broers.db"
 
+# ─── Inlogcodes ──────────────────────────────────────────────────────────────
+CODES = {
+    "Martin": "1234",
+    "Peter":  "5678",
+    "Kasper": "9012",
+}
+
 st.set_page_config(
     page_title="Broers",
     page_icon="📸",
@@ -19,59 +26,194 @@ st.markdown("""
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Broers">
 <style>
-    #MainMenu, footer, header, .stDeployButton { display: none !important; }
-    html, body, [data-testid="stAppViewContainer"] {
-        background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
-        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-    }
-    .block-container {
-        padding-top: 2rem !important;
-        padding-bottom: 3rem !important;
-        max-width: 520px !important;
-    }
-    .app-title {
-        font-size: 28px; font-weight: 700; color: #0F172A;
-        text-align: center; margin-bottom: 2px; letter-spacing: -0.5px;
-    }
-    .app-subtitle {
-        font-size: 14px; color: #64748B; text-align: center; margin-bottom: 20px;
-    }
-    .post-card {
-        background: white; border-radius: 20px; padding: 18px 20px;
-        margin-bottom: 16px; box-shadow: 0 2px 12px rgba(15,23,42,0.07);
-        border: 1px solid #E2E8F0;
-    }
-    .post-header {
-        display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-    }
-    .avatar {
-        width: 38px; height: 38px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 20px; flex-shrink: 0;
-    }
-    .avatar-martin { background: #DBEAFE; }
-    .avatar-peter  { background: #D1FAE5; }
-    .avatar-kasper { background: #FEF3C7; }
-    .author-name { font-weight: 600; font-size: 15px; color: #0F172A; }
-    .post-time { font-size: 12px; color: #94A3B8; margin-left: auto; }
-    .post-content {
-        font-size: 15px; color: #1E293B; line-height: 1.55;
-        white-space: pre-wrap; word-break: break-word;
-        margin-bottom: 12px;
-    }
-    .comment-item {
-        background: #F8FAFC; border-radius: 12px; padding: 8px 12px;
-        margin-top: 6px; font-size: 14px; color: #334155;
-    }
-    .comment-author { font-weight: 600; color: #0F172A; margin-right: 6px; }
-    .stButton > button {
-        border-radius: 12px !important; font-size: 14px !important;
-        padding: 8px 14px !important;
-    }
-    .empty-state {
-        text-align: center; padding: 48px 24px; color: #94A3B8;
-        font-size: 15px;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; }
+
+#MainMenu, footer, header, .stDeployButton,
+[data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
+
+html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+    background: #080808 !important;
+    font-family: 'Inter', -apple-system, sans-serif !important;
+    color: #F1F0EC;
+}
+[data-testid="stMain"] { background: #080808 !important; }
+
+/* animated speed-lines bg */
+body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+        repeating-linear-gradient(
+            105deg,
+            transparent 0px,
+            transparent 120px,
+            rgba(200,160,60,0.025) 121px,
+            rgba(200,160,60,0.025) 122px
+        ),
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(180,20,20,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(180,140,0,0.10) 0%, transparent 60%);
+}
+
+.block-container {
+    padding-top: 0 !important;
+    padding-bottom: 80px !important;
+    max-width: 480px !important;
+    position: relative; z-index: 1;
+}
+
+/* ── Login ── */
+.login-logo {
+    font-size: 64px; text-align: center; margin-bottom: 6px;
+    filter: drop-shadow(0 0 24px rgba(220,40,40,0.6));
+}
+.login-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 56px; font-weight: 900; letter-spacing: 2px;
+    text-transform: uppercase; text-align: center;
+    background: linear-gradient(135deg, #FFD700 0%, #FF4500 60%, #CC0000 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+    text-shadow: none;
+    filter: drop-shadow(0 2px 8px rgba(255,100,0,0.3));
+}
+.login-sub {
+    font-size: 13px; color: #555; text-align: center;
+    text-transform: uppercase; letter-spacing: 3px; margin-bottom: 44px;
+}
+
+/* ── App header ── */
+.app-header {
+    background: linear-gradient(135deg, #1a0000 0%, #2d0000 40%, #1a0800 100%);
+    border-bottom: 2px solid #CC0000;
+    padding: 18px 24px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 32px rgba(200,0,0,0.3), 0 0 80px rgba(200,0,0,0.08);
+    position: relative; overflow: hidden;
+}
+.app-header::after {
+    content: '🏎️';
+    position: absolute; right: -10px; bottom: -8px;
+    font-size: 80px; opacity: 0.07; transform: scaleX(-1);
+}
+.app-header-top {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;
+}
+.app-header-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px; font-weight: 900; letter-spacing: 3px;
+    text-transform: uppercase; color: #FFD700;
+    text-shadow: 0 0 20px rgba(255,215,0,0.4);
+}
+.app-header-user {
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase;
+    background: rgba(204,0,0,0.3);
+    border: 1px solid rgba(204,0,0,0.5);
+    border-radius: 6px; padding: 4px 10px; color: #FF6666;
+}
+.app-header-sub {
+    font-size: 11px; color: #4a3a2a; letter-spacing: 2px; text-transform: uppercase;
+}
+
+/* ── Cards ── */
+.card {
+    background: linear-gradient(135deg, #111111 0%, #0e0e0e 100%);
+    border: 1px solid #222;
+    border-left: 3px solid #CC0000;
+    border-radius: 4px 16px 16px 4px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.card-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+}
+.avi {
+    width: 40px; height: 40px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+}
+.avi-martin { background: linear-gradient(135deg, #7B0000, #CC0000); }
+.avi-peter  { background: linear-gradient(135deg, #7B5C00, #CC9900); }
+.avi-kasper { background: linear-gradient(135deg, #4B0000, #990000); }
+.card-author {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 17px; letter-spacing: 1px;
+    text-transform: uppercase; color: #F1F0EC;
+}
+.card-time { font-size: 11px; color: #333; margin-left: auto; letter-spacing: 1px; }
+.card-body {
+    font-size: 15px; color: #AAA; line-height: 1.6;
+    white-space: pre-wrap; word-break: break-word;
+    margin-bottom: 14px;
+}
+
+/* ── Suggestions ── */
+.section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px; font-weight: 900; letter-spacing: 2px;
+    text-transform: uppercase; color: #FFD700;
+    margin: 36px 0 2px;
+    text-shadow: 0 0 16px rgba(255,215,0,0.3);
+}
+.section-sub { font-size: 12px; color: #444; margin-bottom: 16px; letter-spacing: 1px; text-transform: uppercase; }
+.vote-chip { font-size: 12px; color: #555; margin-top: 4px; }
+
+/* ── Streamlit overrides ── */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea {
+    background: #111 !important;
+    border: 1px solid #333 !important;
+    border-radius: 8px !important;
+    color: #F1F0EC !important;
+    font-family: 'Inter', sans-serif !important;
+}
+.stTextInput > div > div > input::placeholder,
+.stTextArea > div > div > textarea::placeholder { color: #444 !important; }
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: #CC0000 !important;
+    box-shadow: 0 0 0 2px rgba(204,0,0,0.2) !important;
+}
+
+.stButton > button {
+    border-radius: 8px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    border: 1px solid #2a2a2a !important;
+    background: #111 !important;
+    color: #888 !important;
+    letter-spacing: 0.5px;
+}
+.stButton > button:hover {
+    background: #1a1a1a !important;
+    border-color: #444 !important;
+    color: #CCC !important;
+}
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #8B0000, #CC0000) !important;
+    border: none !important;
+    color: #FFD700 !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 16px rgba(180,0,0,0.4) !important;
+}
+.stExpander {
+    background: #0d0d0d !important;
+    border: 1px solid #222 !important;
+    border-radius: 12px !important;
+}
+.stExpander summary { color: #CC0000 !important; font-weight: 700 !important; letter-spacing: 0.5px; }
+label, .stTextArea label, .stTextInput label { color: #444 !important; font-size: 12px !important; }
+[data-testid="stFileUploadDropzone"] { background: #0d0d0d !important; }
+.stAlert { border-radius: 8px !important; }
+
+/* password input eye icon */
+[data-testid="stTextInput"] button { color: #555 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -128,7 +270,7 @@ def init_db():
 def add_post(author, content, media_bytes, media_mime, media_type):
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO posts (author, content, media_data, media_mime, media_type, created_at) VALUES (?,?,?,?,?,?)",
+            "INSERT INTO posts (author,content,media_data,media_mime,media_type,created_at) VALUES (?,?,?,?,?,?)",
             (author, content, media_bytes, media_mime, media_type, time.time()),
         )
 
@@ -140,15 +282,15 @@ def get_posts():
 
 def toggle_reaction(post_id, author, emoji):
     with get_db() as conn:
-        existing = conn.execute(
+        row = conn.execute(
             "SELECT id FROM reactions WHERE post_id=? AND author=? AND emoji=?",
             (post_id, author, emoji),
         ).fetchone()
-        if existing:
-            conn.execute("DELETE FROM reactions WHERE id=?", (existing["id"],))
+        if row:
+            conn.execute("DELETE FROM reactions WHERE id=?", (row["id"],))
         else:
             conn.execute(
-                "INSERT INTO reactions (post_id, author, emoji) VALUES (?,?,?)",
+                "INSERT INTO reactions (post_id,author,emoji) VALUES (?,?,?)",
                 (post_id, author, emoji),
             )
 
@@ -158,18 +300,17 @@ def get_reactions(post_id):
         rows = conn.execute(
             "SELECT emoji, author FROM reactions WHERE post_id=?", (post_id,)
         ).fetchall()
-    counts = {}
-    authors_per_emoji = {}
+    counts, by_emoji = {}, {}
     for r in rows:
         counts[r["emoji"]] = counts.get(r["emoji"], 0) + 1
-        authors_per_emoji.setdefault(r["emoji"], []).append(r["author"])
-    return counts, authors_per_emoji
+        by_emoji.setdefault(r["emoji"], []).append(r["author"])
+    return counts, by_emoji
 
 
 def add_comment(post_id, author, content):
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO comments (post_id, author, content, created_at) VALUES (?,?,?,?)",
+            "INSERT INTO comments (post_id,author,content,created_at) VALUES (?,?,?,?)",
             (post_id, author, content, time.time()),
         )
 
@@ -184,7 +325,7 @@ def get_comments(post_id):
 def add_suggestion(author, content):
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO suggestions (author, content, created_at) VALUES (?,?,?)",
+            "INSERT INTO suggestions (author,content,created_at) VALUES (?,?,?)",
             (author, content, time.time()),
         )
 
@@ -194,22 +335,22 @@ def get_suggestions():
         return conn.execute("SELECT * FROM suggestions ORDER BY created_at DESC").fetchall()
 
 
-def toggle_suggestion_vote(suggestion_id, author):
+def toggle_vote(suggestion_id, author):
     with get_db() as conn:
-        existing = conn.execute(
+        row = conn.execute(
             "SELECT id FROM suggestion_votes WHERE suggestion_id=? AND author=?",
             (suggestion_id, author),
         ).fetchone()
-        if existing:
-            conn.execute("DELETE FROM suggestion_votes WHERE id=?", (existing["id"],))
+        if row:
+            conn.execute("DELETE FROM suggestion_votes WHERE id=?", (row["id"],))
         else:
             conn.execute(
-                "INSERT INTO suggestion_votes (suggestion_id, author) VALUES (?,?)",
+                "INSERT INTO suggestion_votes (suggestion_id,author) VALUES (?,?)",
                 (suggestion_id, author),
             )
 
 
-def get_suggestion_votes(suggestion_id):
+def get_voters(suggestion_id):
     with get_db() as conn:
         rows = conn.execute(
             "SELECT author FROM suggestion_votes WHERE suggestion_id=?", (suggestion_id,)
@@ -219,80 +360,124 @@ def get_suggestion_votes(suggestion_id):
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
-AVATAR = {"Martin": "👨", "Peter": "👦", "Kasper": "🧒"}
-AVATAR_CLASS = {"Martin": "avatar-martin", "Peter": "avatar-peter", "Kasper": "avatar-kasper"}
-EMOJIS = ["❤️", "😂", "🔥", "👍", "😮", "🫶"]
+AVI      = {"Martin": "👨", "Peter": "👦", "Kasper": "🧒"}
+AVI_CLS  = {"Martin": "avi-martin", "Peter": "avi-peter", "Kasper": "avi-kasper"}
+EMOJIS   = ["❤️", "😂", "🔥", "👍", "😮", "🫶"]
 
 
-def format_time(ts):
-    dt = datetime.datetime.fromtimestamp(ts)
-    now = datetime.datetime.now()
-    diff = now - dt
-    if diff.seconds < 60 and diff.days == 0:
-        return "zojuist"
-    if diff.seconds < 3600 and diff.days == 0:
-        return f"{diff.seconds // 60}m geleden"
+def ago(ts):
+    diff = datetime.datetime.now() - datetime.datetime.fromtimestamp(ts)
     if diff.days == 0:
-        return f"{diff.seconds // 3600}u geleden"
-    if diff.days == 1:
-        return "gisteren"
-    return dt.strftime("%-d %b")
+        s = diff.seconds
+        if s < 60:   return "zojuist"
+        if s < 3600: return f"{s // 60}m"
+        return f"{s // 3600}u"
+    if diff.days == 1: return "gisteren"
+    return datetime.datetime.fromtimestamp(ts).strftime("%-d %b")
 
 
 # ─── Init ───────────────────────────────────────────────────────────────────
 
 init_db()
 
-if "author" not in st.session_state:
-    st.session_state["author"] = "Martin"
+if "user" not in st.session_state:
+    st.session_state["user"] = None
 if "show_comments" not in st.session_state:
     st.session_state["show_comments"] = {}
 
-# ─── Header ─────────────────────────────────────────────────────────────────
+# ─── Login ──────────────────────────────────────────────────────────────────
 
-st.markdown('<div class="app-title">📸 Broers</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle">Tips, foto\'s en video\'s met Martin, Peter & Kasper</div>', unsafe_allow_html=True)
+if not st.session_state["user"]:
+    st.markdown("""
+    <div style="height:32px"></div>
+    <div class="login-logo">🏎️</div>
+    <div class="login-title">Broers</div>
+    <div class="login-sub">Exclusief — Martin · Peter · Kasper</div>
+    """, unsafe_allow_html=True)
 
-cols = st.columns(3)
-for i, name in enumerate(["Martin", "Peter", "Kasper"]):
-    with cols[i]:
-        active = st.session_state["author"] == name
-        label = f"{'✓ ' if active else ''}{AVATAR[name]} {name}"
-        if st.button(label, key=f"who_{name}", use_container_width=True,
-                     type="primary" if active else "secondary"):
-            st.session_state["author"] = name
-            st.rerun()
+    if "login_name" not in st.session_state:
+        st.session_state["login_name"] = None
 
-author = st.session_state["author"]
+    cols = st.columns(3)
+    for i, name in enumerate(["Martin", "Peter", "Kasper"]):
+        with cols[i]:
+            selected = st.session_state["login_name"] == name
+            if st.button(
+                f"{AVI[name]} {name}",
+                key=f"pick_{name}",
+                use_container_width=True,
+                type="primary" if selected else "secondary",
+            ):
+                st.session_state["login_name"] = name
+                st.rerun()
+
+    if st.session_state["login_name"]:
+        name = st.session_state["login_name"]
+        st.markdown("<br>", unsafe_allow_html=True)
+        code = st.text_input(
+            f"Code van {name}",
+            type="password",
+            placeholder="Voer je code in",
+            key="code_input",
+        )
+        login_col, _ = st.columns([1, 2])
+        with login_col:
+            if st.button("Inloggen →", type="primary", use_container_width=True):
+                if code == CODES[name]:
+                    st.session_state["user"] = name
+                    st.rerun()
+                else:
+                    st.error("Verkeerde code. Probeer opnieuw.")
+    st.stop()
+
+# ─── App (ingelogd) ─────────────────────────────────────────────────────────
+
+author = st.session_state["user"]
+
+st.markdown(f"""
+<div class="app-header">
+  <div class="app-header-top">
+    <div class="app-header-title">🏎️ &nbsp;Broers</div>
+    <div class="app-header-user">{AVI[author]} &nbsp;{author.upper()}</div>
+  </div>
+  <div class="app-header-sub">🍸 &nbsp;Tips &nbsp;·&nbsp; Foto's &nbsp;·&nbsp; Video's</div>
+</div>
+""", unsafe_allow_html=True)
+
+logout_col, _ = st.columns([1, 4])
+with logout_col:
+    if st.button("Uitloggen", key="logout"):
+        st.session_state["user"] = None
+        st.session_state["login_name"] = None
+        st.rerun()
+
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ─── Nieuwe post ────────────────────────────────────────────────────────────
 
-with st.expander(f"➕  Nieuwe post als {AVATAR[author]} {author}", expanded=False):
+with st.expander(f"➕  Nieuwe post", expanded=False):
     new_content = st.text_area(
         "Tekst",
-        placeholder="Deel een tip, bericht of idee…",
-        height=100,
+        placeholder="Deel een tip, idee of bericht…",
+        height=90,
         label_visibility="collapsed",
     )
     uploaded = st.file_uploader(
-        "Foto of video",
+        "Foto of video (optioneel)",
         type=["jpg", "jpeg", "png", "gif", "webp", "mp4", "mov", "avi", "webm"],
-        label_visibility="visible",
     )
-
-    submit_col, _ = st.columns([1, 2])
-    with submit_col:
-        if st.button("📤 Posten", disabled=(not new_content.strip() and uploaded is None),
-                     use_container_width=True, type="primary"):
-            media_bytes = media_mime = media_type = None
+    post_col, _ = st.columns([1, 2])
+    with post_col:
+        if st.button("📤 Posten", type="primary", use_container_width=True,
+                     disabled=(not new_content.strip() and uploaded is None)):
+            mb = mm = mt = None
             if uploaded:
-                media_bytes = uploaded.read()
-                media_mime = uploaded.type
-                media_type = "video" if uploaded.type.startswith("video") else "photo"
-            add_post(author, new_content.strip(), media_bytes, media_mime, media_type)
+                mb = uploaded.read()
+                mm = uploaded.type
+                mt = "video" if uploaded.type.startswith("video") else "photo"
+            add_post(author, new_content.strip(), mb, mm, mt)
             st.success("Geplaatst! 🎉")
-            time.sleep(0.6)
+            time.sleep(0.5)
             st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -303,151 +488,130 @@ posts = get_posts()
 
 if not posts:
     st.markdown("""
-    <div class="empty-state">
-        📭<br><br>
-        Nog geen posts.<br>
-        Wees de eerste — deel een tip, foto of video!
+    <div style="text-align:center;padding:60px 24px;color:#334155;">
+        <div style="font-size:48px;margin-bottom:12px;">📭</div>
+        <div style="font-size:16px;font-weight:600;color:#64748B;">Nog niks gedeeld</div>
+        <div style="font-size:14px;color:#475569;margin-top:4px;">Wees de eerste!</div>
     </div>
     """, unsafe_allow_html=True)
 else:
     for post in posts:
         pid = post["id"]
-        reactions, authors_per_emoji = get_reactions(pid)
+        reactions, by_emoji = get_reactions(pid)
         comments = get_comments(pid)
         show_comments = st.session_state["show_comments"].get(pid, False)
 
-        avatar_cls = AVATAR_CLASS.get(post["author"], "avatar-martin")
-        avatar_icon = AVATAR.get(post["author"], "👤")
-
-        header_html = f"""
-        <div class="post-card">
-          <div class="post-header">
-            <div class="avatar {avatar_cls}">{avatar_icon}</div>
-            <div><div class="author-name">{post["author"]}</div></div>
-            <div class="post-time">{format_time(post["created_at"])}</div>
+        card_html = f"""
+        <div class="card">
+          <div class="card-header">
+            <div class="avi {AVI_CLS.get(post['author'], 'avi-martin')}">{AVI.get(post['author'], '👤')}</div>
+            <div>
+              <div class="card-author">{post['author']}</div>
+            </div>
+            <div class="card-time">{ago(post['created_at'])}</div>
           </div>
+          {"<div class='card-body'>" + post['content'] + "</div>" if post['content'] else ""}
+        </div>
         """
-        if post["content"]:
-            header_html += f'<div class="post-content">{post["content"]}</div>'
-        header_html += "</div>"
-        st.markdown(header_html, unsafe_allow_html=True)
+        st.markdown(card_html, unsafe_allow_html=True)
 
         if post["media_data"]:
             if post["media_type"] == "video":
                 st.video(post["media_data"])
             else:
-                img_b64 = base64.b64encode(post["media_data"]).decode()
+                b64 = base64.b64encode(post["media_data"]).decode()
                 mime = post["media_mime"] or "image/jpeg"
                 st.markdown(
-                    f'<img src="data:{mime};base64,{img_b64}" '
-                    f'style="width:100%;border-radius:14px;margin-bottom:10px;" />',
+                    f'<img src="data:{mime};base64,{b64}" '
+                    f'style="width:100%;border-radius:16px;margin:-6px 0 12px;" />',
                     unsafe_allow_html=True,
                 )
 
-        reaction_cols = st.columns(len(EMOJIS) + 1)
+        rcols = st.columns(len(EMOJIS) + 1)
         for i, emoji in enumerate(EMOJIS):
             count = reactions.get(emoji, 0)
-            mine = author in authors_per_emoji.get(emoji, [])
-            with reaction_cols[i]:
+            mine = author in by_emoji.get(emoji, [])
+            with rcols[i]:
                 if st.button(
                     f"{emoji} {count}" if count else emoji,
-                    key=f"react_{pid}_{emoji}",
+                    key=f"r_{pid}_{emoji}",
                     use_container_width=True,
                     type="primary" if mine else "secondary",
                 ):
                     toggle_reaction(pid, author, emoji)
                     st.rerun()
 
-        n_comments = len(comments)
-        with reaction_cols[-1]:
-            if st.button(f"💬 {n_comments}" if n_comments else "💬",
-                         key=f"toggle_comments_{pid}", use_container_width=True):
+        n = len(comments)
+        with rcols[-1]:
+            if st.button(f"💬 {n}" if n else "💬", key=f"tc_{pid}", use_container_width=True):
                 st.session_state["show_comments"][pid] = not show_comments
                 st.rerun()
 
         if show_comments:
             for c in comments:
                 st.markdown(
-                    f'<div class="comment-item">'
-                    f'<span class="comment-author">{AVATAR.get(c["author"], "👤")} {c["author"]}</span>'
-                    f'{c["content"]}</div>',
+                    f'<div style="background:rgba(255,255,255,0.05);border-radius:12px;'
+                    f'padding:8px 14px;margin-top:6px;font-size:14px;color:#CBD5E1;">'
+                    f'<span style="font-weight:700;color:#F1F5F9;margin-right:6px;">'
+                    f'{AVI.get(c["author"],"👤")} {c["author"]}</span>{c["content"]}</div>',
                     unsafe_allow_html=True,
                 )
-            new_comment = st.text_input(
-                "Reageer…", key=f"comment_input_{pid}",
-                placeholder="Typ je reactie…", label_visibility="collapsed",
-            )
-            send_col, _ = st.columns([1, 3])
-            with send_col:
-                if st.button("Stuur", key=f"send_comment_{pid}", type="primary"):
-                    if new_comment.strip():
-                        add_comment(pid, author, new_comment.strip())
+            new_c = st.text_input("", key=f"ci_{pid}", placeholder="Reageer…",
+                                  label_visibility="collapsed")
+            sc, _ = st.columns([1, 3])
+            with sc:
+                if st.button("Stuur", key=f"sc_{pid}", type="primary"):
+                    if new_c.strip():
+                        add_comment(pid, author, new_c.strip())
                         st.rerun()
 
-        st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
 
 # ─── Verbeteringen ───────────────────────────────────────────────────────────
 
-st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("""
-<div style="height:1px;background:#E2E8F0;margin-bottom:24px;"></div>
-<div style="font-size:18px;font-weight:700;color:#0F172A;margin-bottom:4px;">🛠️ Verbeter de app</div>
-<div style="font-size:13px;color:#64748B;margin-bottom:16px;">
-  Mis je iets? Heb je een idee? Zet het hier neer — de anderen kunnen erop stemmen.
-</div>
+<div style="height:1px;background:rgba(255,255,255,0.08);margin:32px 0 0;"></div>
+<div class="section-title">🛠️ Verbeter de app</div>
+<div class="section-sub">Idee? Stuur het in. De anderen kunnen stemmen.</div>
 """, unsafe_allow_html=True)
 
-with st.expander("➕  Nieuw idee insturen", expanded=False):
-    suggestion_text = st.text_area(
-        "Idee",
-        placeholder="Bijv. 'Donkere modus', 'Zoekfunctie', 'Notificaties'…",
-        height=80,
-        label_visibility="collapsed",
-        key="suggestion_input",
-    )
-    s_col, _ = st.columns([1, 2])
-    with s_col:
-        if st.button("💡 Insturen", disabled=not suggestion_text.strip(),
-                     use_container_width=True, type="primary", key="submit_suggestion"):
-            add_suggestion(author, suggestion_text.strip())
-            st.success("Idee ingediend!")
+with st.expander("➕  Nieuw idee", expanded=False):
+    sug_text = st.text_area("Idee", placeholder="Bijv. 'donkere modus', 'zoeken', 'notificaties'…",
+                             height=80, label_visibility="collapsed", key="sug_in")
+    sc2, _ = st.columns([1, 2])
+    with sc2:
+        if st.button("💡 Insturen", disabled=not sug_text.strip(),
+                     use_container_width=True, type="primary", key="sug_submit"):
+            add_suggestion(author, sug_text.strip())
+            st.success("Ingediend!")
             time.sleep(0.5)
             st.rerun()
 
-suggestions = get_suggestions()
-if not suggestions:
-    st.markdown(
-        '<div style="text-align:center;padding:24px;color:#94A3B8;font-size:14px;">'
-        "Nog geen ideeën. Wees de eerste!</div>",
-        unsafe_allow_html=True,
-    )
-else:
-    for s in suggestions:
-        sid = s["id"]
-        voters = get_suggestion_votes(sid)
-        voted = author in voters
-        n_votes = len(voters)
-        voter_names = ", ".join(voters) if voters else ""
+for s in get_suggestions():
+    sid = s["id"]
+    voters = get_voters(sid)
+    voted = author in voters
+    n_votes = len(voters)
 
-        st.markdown(f"""
-        <div class="post-card" style="margin-bottom:10px;">
-          <div class="post-header">
-            <div class="avatar {AVATAR_CLASS.get(s['author'], 'avatar-martin')}">{AVATAR.get(s['author'], '👤')}</div>
-            <div><div class="author-name">{s['author']}</div></div>
-            <div class="post-time">{format_time(s['created_at'])}</div>
-          </div>
-          <div class="post-content" style="margin-bottom:4px;">{s['content']}</div>
-          {"<div style='font-size:12px;color:#94A3B8;margin-bottom:8px;'>👍 " + voter_names + "</div>" if voter_names else ""}
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-header">
+        <div class="avi {AVI_CLS.get(s['author'],'avi-martin')}">{AVI.get(s['author'],'👤')}</div>
+        <div><div class="card-author">{s['author']}</div></div>
+        <div class="card-time">{ago(s['created_at'])}</div>
+      </div>
+      <div class="card-body" style="margin-bottom:6px;">{s['content']}</div>
+      {"<div class='vote-chip'>👍 " + " · ".join(voters) + "</div>" if voters else ""}
+    </div>
+    """, unsafe_allow_html=True)
 
-        vote_col, _ = st.columns([1, 3])
-        with vote_col:
-            if st.button(
-                f"{'✓ ' if voted else ''}👍 {n_votes}" if n_votes else ("✓ 👍" if voted else "👍"),
-                key=f"vote_{sid}",
-                use_container_width=True,
-                type="primary" if voted else "secondary",
-            ):
-                toggle_suggestion_vote(sid, author)
-                st.rerun()
+    vc, _ = st.columns([1, 3])
+    with vc:
+        if st.button(
+            ("✓ " if voted else "") + (f"👍 {n_votes}" if n_votes else "👍"),
+            key=f"v_{sid}",
+            use_container_width=True,
+            type="primary" if voted else "secondary",
+        ):
+            toggle_vote(sid, author)
+            st.rerun()
