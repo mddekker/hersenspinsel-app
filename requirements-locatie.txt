@@ -1,0 +1,7 @@
+# Afhankelijkheden voor iphone_locatie_spoof.py — installeer LOKAAL op je eigen
+# computer (niet voor de cloud-deploy van de andere apps).
+streamlit>=1.32.0
+pymobiledevice3>=4.0.0
+streamlit-folium>=0.20.0
+folium>=0.16.0
+geopy>=2.4.0
