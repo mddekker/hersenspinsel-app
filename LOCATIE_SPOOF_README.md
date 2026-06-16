@@ -35,9 +35,11 @@ Per besturingssysteem nog dit:
    Ontwikkelaarsmodus* (vanaf iOS 16; de telefoon herstart hierna).
 3. **Alleen iOS 17 en nieuwer**: open een **aparte terminal** en start de tunnel —
    laat die terminal open staan:
-   ```bash
-   sudo pymobiledevice3 remote tunneld
-   ```
+   - **macOS / Linux:** `sudo pymobiledevice3 remote tunneld`
+   - **Windows:** open PowerShell **als administrator** (rechtermuisklik →
+     *Als administrator uitvoeren*) en draai zónder sudo:
+     `pymobiledevice3 remote tunneld`
+
    (Op iOS 16 en lager is deze stap *niet* nodig.)
 
 ## Starten
