@@ -11,6 +11,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, date
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
@@ -20,6 +21,8 @@ import streamlit as st
 # ---------------------------------------------------------------------------
 
 DB_PATH = Path(__file__).parent / "wk_pool.db"
+NL_TZ = ZoneInfo("Europe/Amsterdam")
+DEFAULT_KICKOFF = "21:00"
 
 st.set_page_config(
     page_title="RBT WK Pool 2026",
@@ -122,7 +125,8 @@ def get_conn() -> sqlite3.Connection:
             home TEXT NOT NULL,
             away TEXT NOT NULL,
             actual_home INTEGER,
-            actual_away INTEGER
+            actual_away INTEGER,
+            kickoff TEXT
         );
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY,
@@ -139,12 +143,29 @@ def get_conn() -> sqlite3.Connection:
         );
         """
     )
+    # Migratie voor bestaande databases: kickoff-kolom toevoegen indien nog niet aanwezig.
+    try:
+        con.execute("ALTER TABLE matches ADD COLUMN kickoff TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     if con.execute("SELECT COUNT(*) FROM matches").fetchone()[0] == 0:
         con.executemany(
-            "INSERT INTO matches(group_code, matchday, match_date, home, away) VALUES (?, ?, ?, ?, ?)",
-            [(m["group"], m["matchday"], m["date"], m["home"], m["away"]) for m in build_matches()],
+            "INSERT INTO matches(group_code, matchday, match_date, home, away, kickoff) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (m["group"], m["matchday"], m["date"], m["home"], m["away"],
+                 f'{m["date"]} {DEFAULT_KICKOFF}')
+                for m in build_matches()
+            ],
         )
-        con.commit()
+
+    # Backfill voor rijen zonder kickoff (oude DBs of admin die het leeg liet).
+    con.execute(
+        "UPDATE matches SET kickoff = match_date || ' ' || ? WHERE kickoff IS NULL OR kickoff = ''",
+        (DEFAULT_KICKOFF,),
+    )
+    con.commit()
     return con
 
 
@@ -164,10 +185,26 @@ def all_users(con: sqlite3.Connection) -> list[tuple[int, str]]:
 
 def matches_df(con: sqlite3.Connection) -> pd.DataFrame:
     return pd.read_sql_query(
-        "SELECT id, group_code, matchday, match_date, home, away, actual_home, actual_away "
+        "SELECT id, group_code, matchday, match_date, home, away, "
+        "actual_home, actual_away, kickoff "
         "FROM matches ORDER BY match_date, group_code, matchday, id",
         con,
     )
+
+
+def is_locked(match_row) -> bool:
+    """Voorspelling vergrendeld zodra de aftrap is geweest, of de admin
+    een uitslag heeft ingevoerd."""
+    if match_row["actual_home"] is not None and match_row["actual_away"] is not None:
+        return True
+    kickoff = match_row.get("kickoff") if hasattr(match_row, "get") else match_row["kickoff"]
+    if not kickoff:
+        return False
+    try:
+        ko = datetime.strptime(str(kickoff), "%Y-%m-%d %H:%M").replace(tzinfo=NL_TZ)
+    except ValueError:
+        return False
+    return datetime.now(NL_TZ) >= ko
 
 
 def predictions_for(con: sqlite3.Connection, user_id: int) -> dict[int, tuple[int, int]]:
@@ -386,7 +423,7 @@ if st.session_state["user_id"] is None:
         '<li><b>3 punten</b> voor een exacte uitslag</li>'
         '<li><b>1 punt</b> voor de juiste toto (winst / gelijk / verlies)</li>'
         '<li><b>0 punten</b> als je er volledig naast zit</li>'
-        '<li>Je kunt je voorspellingen aanpassen tot de wedstrijd begint</li>'
+        '<li>Voorspellingen aanpassen kan tot de aftrap (21:00 NL-tijd op de speeldag)</li>'
         '<li>De groepsfase telt — 72 wedstrijden, 12 groepen</li>'
         '</ul></div>',
         unsafe_allow_html=True,
@@ -442,10 +479,17 @@ def render_predict_tab():
         for _, m in group_df.iterrows():
             mid = int(m["id"])
             ph, pa = preds.get(mid, (None, None))
-            locked = m["actual_home"] is not None and m["actual_away"] is not None
+            has_actual = m["actual_home"] is not None and m["actual_away"] is not None
+            locked = is_locked(m)
 
             col_label, col_h, col_dash, col_a = st.columns([5, 1.2, 0.3, 1.2])
             with col_label:
+                if has_actual:
+                    badge = f'<span class="actual">{int(m["actual_home"])}-{int(m["actual_away"])}</span>'
+                elif locked:
+                    badge = '<span class="actual" style="background:#94A3B8;">🔒 gesloten</span>'
+                else:
+                    badge = ""
                 st.markdown(
                     f'<div class="match-date">SPEELRONDE {m["matchday"]} · {format_dutch_date(m["match_date"])}</div>'
                     f'<div><span>{flag(m["home"])}</span> '
@@ -453,7 +497,7 @@ def render_predict_tab():
                     f'<span style="color:#94A3B8;">vs</span> '
                     f'<span class="team-name">{m["away"]}</span> '
                     f'<span>{flag(m["away"])}</span>'
-                    + (f'<span class="actual">{int(m["actual_home"])}-{int(m["actual_away"])}</span>' if locked else "")
+                    + badge
                     + "</div>",
                     unsafe_allow_html=True,
                 )
@@ -474,8 +518,16 @@ def render_predict_tab():
                     disabled=locked,
                 )
 
-            if not locked and (ph, pa) != (new_h, new_a):
-                save_prediction(con, st.session_state["user_id"], mid, int(new_h), int(new_a))
+            if not locked:
+                if ph is not None:
+                    # Bestaande voorspelling — sla elke wijziging op.
+                    if (int(ph), int(pa)) != (int(new_h), int(new_a)):
+                        save_prediction(con, st.session_state["user_id"], mid, int(new_h), int(new_a))
+                else:
+                    # Nog geen voorspelling — sla pas op als de speler iets anders dan 0-0 invult,
+                    # zodat we niet automatisch alle 72 wedstrijden op 0-0 vastleggen bij openen.
+                    if (int(new_h), int(new_a)) != (0, 0):
+                        save_prediction(con, st.session_state["user_id"], mid, int(new_h), int(new_a))
 
 
 # ---------------------------------------------------------------------------
@@ -526,7 +578,7 @@ def render_rules_tab():
         '<li><b>1 punt</b> — juiste toto (winst / gelijk / verlies)</li>'
         '<li><b>0 punten</b> — toto fout</li>'
         '<li>72 groepswedstrijden tellen mee</li>'
-        '<li>Voorspellingen aanpassen kan zolang de wedstrijd nog niet is afgelopen</li>'
+        '<li>Deadline: tot de aftrap (default 21:00 NL-tijd op de speeldag)</li>'
         '<li>Bij gelijke stand: meeste bullseyes wint, daarna meeste toto\'s</li>'
         '</ul></div>',
         unsafe_allow_html=True,
