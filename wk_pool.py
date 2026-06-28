@@ -369,13 +369,18 @@ def matches_df(con: sqlite3.Connection) -> pd.DataFrame:
     )
 
 
+def _has(v) -> bool:
+    """True als waarde echt gezet is (pandas geeft NaN voor SQL NULL)."""
+    return v is not None and pd.notna(v)
+
+
 def is_locked(match_row) -> bool:
     """Voorspelling vergrendeld zodra de aftrap is geweest, of de admin
     een uitslag heeft ingevoerd."""
-    if match_row["actual_home"] is not None and match_row["actual_away"] is not None:
+    if _has(match_row["actual_home"]) and _has(match_row["actual_away"]):
         return True
     kickoff = match_row.get("kickoff") if hasattr(match_row, "get") else match_row["kickoff"]
-    if not kickoff:
+    if not _has(kickoff):
         return False
     try:
         ko = datetime.strptime(str(kickoff), "%Y-%m-%d %H:%M").replace(tzinfo=NL_TZ)
@@ -882,8 +887,8 @@ def _render_revealed_predictions(m) -> None:
     """Toon iedereens voorspelling onder een vergrendelde wedstrijd."""
     mid = int(m["id"])
     preds = predictions_for_match(con, mid)
-    has_actual = m["actual_home"] is not None and m["actual_away"] is not None
-    is_ko = m.get("round") and m["round"] != "group"
+    has_actual = _has(m["actual_home"]) and _has(m["actual_away"])
+    is_ko = _has(m.get("round") if hasattr(m, "get") else m["round"]) and m["round"] != "group"
 
     title = "🎯 Iedereens voorspelling" if has_actual else "🔓 Voorspellingen onthuld"
     count = f' <span style="opacity:0.7;font-weight:500;">({len(preds)})</span>' if preds else ""
@@ -906,7 +911,8 @@ def _render_revealed_predictions(m) -> None:
         suffix = ""
         if has_actual:
             pts = score_points(int(ph), int(pa), int(m["actual_home"]), int(m["actual_away"]))
-            wb = winner_bonus(pw, m["actual_winner"]) if is_ko else None
+            actual_w = m["actual_winner"] if _has(m["actual_winner"]) else None
+            wb = winner_bonus(pw, actual_w) if is_ko else None
             total = (pts or 0) + (wb or 0)
             if pts == 3:
                 cls += " bullseye"
@@ -936,10 +942,10 @@ def _render_next_reveal_banner(df: pd.DataFrame) -> None:
     horizon = 6 * 3600
     candidates: list[tuple] = []
     for _, m in df.iterrows():
-        if m["actual_home"] is not None and m["actual_away"] is not None:
+        if _has(m["actual_home"]) and _has(m["actual_away"]):
             continue
         kickoff = m.get("kickoff") if hasattr(m, "get") else m["kickoff"]
-        if not kickoff:
+        if not _has(kickoff):
             continue
         try:
             ko = datetime.strptime(str(kickoff), "%Y-%m-%d %H:%M").replace(tzinfo=NL_TZ)
@@ -975,7 +981,7 @@ def _render_match_row(m, pred: dict | None, is_knockout: bool) -> None:
     ph = pred["home"] if pred else None
     pa = pred["away"] if pred else None
     pw = pred["winner"] if pred else None
-    has_actual = m["actual_home"] is not None and m["actual_away"] is not None
+    has_actual = _has(m["actual_home"]) and _has(m["actual_away"])
     locked = is_locked(m)
 
     col_label, col_h, col_dash, col_a = st.columns([5, 1.2, 0.3, 1.2])
@@ -1261,7 +1267,7 @@ def render_admin_tab():
         with cols[1]:
             h = st.number_input(
                 f"ah_{mid}", min_value=0, max_value=20, step=1,
-                value=int(m["actual_home"]) if m["actual_home"] is not None else 0,
+                value=int(m["actual_home"]) if _has(m["actual_home"]) else 0,
                 key=f"ah_{mid}", label_visibility="collapsed",
             )
         with cols[2]:
@@ -1269,7 +1275,7 @@ def render_admin_tab():
         with cols[3]:
             a = st.number_input(
                 f"aa_{mid}", min_value=0, max_value=20, step=1,
-                value=int(m["actual_away"]) if m["actual_away"] is not None else 0,
+                value=int(m["actual_away"]) if _has(m["actual_away"]) else 0,
                 key=f"aa_{mid}", label_visibility="collapsed",
             )
         with cols[4]:
@@ -1277,7 +1283,7 @@ def render_admin_tab():
                 set_actual(con, mid, int(h), int(a))
                 st.success("Opgeslagen")
                 st.rerun()
-            if m["actual_home"] is not None and st.button("Wissen", key=f"clear_{mid}"):
+            if _has(m["actual_home"]) and st.button("Wissen", key=f"clear_{mid}"):
                 set_actual(con, mid, None, None)
                 if is_ko:
                     set_actual_winner(con, mid, None)
@@ -1286,9 +1292,10 @@ def render_admin_tab():
         if is_ko:
             win_opts = ["— nog niet bekend —", m["home"], m["away"]]
             current = 0
-            if m["actual_winner"] == m["home"]:
+            actual_w = m["actual_winner"] if _has(m["actual_winner"]) else None
+            if actual_w == m["home"]:
                 current = 1
-            elif m["actual_winner"] == m["away"]:
+            elif actual_w == m["away"]:
                 current = 2
             wcols = st.columns([2, 5])
             with wcols[0]:
@@ -1306,7 +1313,7 @@ def render_admin_tab():
                     label_visibility="collapsed",
                 )
                 new_winner = None if winner == win_opts[0] else winner
-                if (m["actual_winner"] or None) != new_winner:
+                if (actual_w or None) != new_winner:
                     set_actual_winner(con, mid, new_winner)
                     st.rerun()
 
