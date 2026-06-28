@@ -187,45 +187,48 @@ ROUND_ORDER: list[str] = ["r32", "r16", "qf", "sf", "3rd", "final"]
 # match_date is de FIFA-datum (lokale stadion-datum) zodat het schema
 # leesbaar blijft.
 KNOCKOUTS: list[dict] = [
-    # Round of 32 — volledige bracket bevestigd op 28 juni 2026
-    # 28 jun
-    {"round": "r32", "date": "2026-06-28", "kickoff": "2026-06-29 00:00",
+    # Round of 32 — alle data/aftraptijden in Europe/Amsterdam tijd.
+    # Geverifieerd tegen meerdere Nederlandse bronnen (intikkertje.nl,
+    # voetbalticketshop.nl, voetbalzone.nl, sporza.be).
+    # Zo 28 jun
+    {"round": "r32", "date": "2026-06-28", "kickoff": "2026-06-28 21:00",
      "home": "Zuid-Afrika", "away": "Canada"},
-    # 29 jun
-    {"round": "r32", "date": "2026-06-29", "kickoff": "2026-06-29 20:00",
+    # Ma 29 jun
+    {"round": "r32", "date": "2026-06-29", "kickoff": "2026-06-29 19:00",
      "home": "Brazilië", "away": "Japan"},
     {"round": "r32", "date": "2026-06-29", "kickoff": "2026-06-29 22:30",
      "home": "Duitsland", "away": "Paraguay"},
-    {"round": "r32", "date": "2026-06-29", "kickoff": "2026-06-30 05:00",
+    # Di 30 jun
+    {"round": "r32", "date": "2026-06-30", "kickoff": "2026-06-30 03:00",
      "home": "Nederland", "away": "Marokko"},
-    # 30 jun
-    {"round": "r32", "date": "2026-06-30", "kickoff": "2026-06-30 20:00",
+    {"round": "r32", "date": "2026-06-30", "kickoff": "2026-06-30 19:00",
      "home": "Ivoorkust", "away": "Noorwegen"},
     {"round": "r32", "date": "2026-06-30", "kickoff": "2026-06-30 23:00",
      "home": "Frankrijk", "away": "Zweden"},
-    {"round": "r32", "date": "2026-06-30", "kickoff": "2026-07-01 05:00",
+    # Wo 1 jul
+    {"round": "r32", "date": "2026-07-01", "kickoff": "2026-07-01 03:00",
      "home": "Mexico", "away": "Ecuador"},
-    # 1 jul
-    {"round": "r32", "date": "2026-07-01", "kickoff": "2026-07-01 22:00",
+    {"round": "r32", "date": "2026-07-01", "kickoff": "2026-07-01 18:00",
      "home": "DR Congo", "away": "Engeland"},
-    {"round": "r32", "date": "2026-07-01", "kickoff": "2026-07-02 03:00",
+    {"round": "r32", "date": "2026-07-01", "kickoff": "2026-07-01 22:00",
      "home": "België", "away": "Senegal"},
-    {"round": "r32", "date": "2026-07-01", "kickoff": "2026-07-02 05:00",
+    # Do 2 jul
+    {"round": "r32", "date": "2026-07-02", "kickoff": "2026-07-02 02:00",
      "home": "Verenigde Staten", "away": "Bosnië-Herzegovina"},
-    # 2 jul
-    {"round": "r32", "date": "2026-07-02", "kickoff": "2026-07-02 20:00",
+    {"round": "r32", "date": "2026-07-02", "kickoff": "2026-07-02 21:00",
      "home": "Oostenrijk", "away": "Spanje"},
-    {"round": "r32", "date": "2026-07-02", "kickoff": "2026-07-02 23:00",
+    # Vr 3 jul
+    {"round": "r32", "date": "2026-07-03", "kickoff": "2026-07-03 01:00",
      "home": "Portugal", "away": "Kroatië"},
-    {"round": "r32", "date": "2026-07-02", "kickoff": "2026-07-03 03:00",
+    {"round": "r32", "date": "2026-07-03", "kickoff": "2026-07-03 05:00",
      "home": "Algerije", "away": "Zwitserland"},
-    # 3 jul
     {"round": "r32", "date": "2026-07-03", "kickoff": "2026-07-03 20:00",
-     "home": "Colombia", "away": "Ghana"},
-    {"round": "r32", "date": "2026-07-03", "kickoff": "2026-07-03 21:00",
      "home": "Egypte", "away": "Australië"},
-    {"round": "r32", "date": "2026-07-03", "kickoff": "2026-07-03 23:00",
+    # Za 4 jul
+    {"round": "r32", "date": "2026-07-04", "kickoff": "2026-07-04 00:00",
      "home": "Argentinië", "away": "Kaapverdië"},
+    {"round": "r32", "date": "2026-07-04", "kickoff": "2026-07-04 03:30",
+     "home": "Colombia", "away": "Ghana"},
 ]
 
 
