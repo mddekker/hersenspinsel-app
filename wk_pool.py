@@ -14,6 +14,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+import requests
 import streamlit as st
 
 # ---------------------------------------------------------------------------
@@ -37,6 +38,80 @@ def _admin_password() -> str:
         return st.secrets["WK_POOL_ADMIN_PASSWORD"]
     except Exception:
         return "rbt2026"
+
+
+def _football_data_api_key() -> str | None:
+    try:
+        return st.secrets["FOOTBALL_DATA_API_KEY"]
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Engelse → Nederlandse teamnamen (voor sync met football-data.org)
+# ---------------------------------------------------------------------------
+
+EN_TO_NL: dict[str, str] = {
+    "Mexico": "Mexico",
+    "South Africa": "Zuid-Afrika",
+    "Korea Republic": "Zuid-Korea",
+    "South Korea": "Zuid-Korea",
+    "Czechia": "Tsjechië",
+    "Czech Republic": "Tsjechië",
+    "Canada": "Canada",
+    "Bosnia and Herzegovina": "Bosnië-Herzegovina",
+    "Bosnia-Herzegovina": "Bosnië-Herzegovina",
+    "Switzerland": "Zwitserland",
+    "Qatar": "Qatar",
+    "Brazil": "Brazilië",
+    "Morocco": "Marokko",
+    "Scotland": "Schotland",
+    "Haiti": "Haïti",
+    "USA": "Verenigde Staten",
+    "United States": "Verenigde Staten",
+    "Paraguay": "Paraguay",
+    "Australia": "Australië",
+    "Turkey": "Turkije",
+    "Türkiye": "Turkije",
+    "Germany": "Duitsland",
+    "Curaçao": "Curaçao",
+    "Curacao": "Curaçao",
+    "Côte d'Ivoire": "Ivoorkust",
+    "Ivory Coast": "Ivoorkust",
+    "Ecuador": "Ecuador",
+    "Netherlands": "Nederland",
+    "Japan": "Japan",
+    "Sweden": "Zweden",
+    "Tunisia": "Tunesië",
+    "Belgium": "België",
+    "Egypt": "Egypte",
+    "Iran": "Iran",
+    "IR Iran": "Iran",
+    "New Zealand": "Nieuw-Zeeland",
+    "Spain": "Spanje",
+    "Cape Verde": "Kaapverdië",
+    "Cabo Verde": "Kaapverdië",
+    "Saudi Arabia": "Saoedi-Arabië",
+    "Uruguay": "Uruguay",
+    "France": "Frankrijk",
+    "Senegal": "Senegal",
+    "Norway": "Noorwegen",
+    "Iraq": "Irak",
+    "Argentina": "Argentinië",
+    "Algeria": "Algerije",
+    "Austria": "Oostenrijk",
+    "Jordan": "Jordanië",
+    "Portugal": "Portugal",
+    "Uzbekistan": "Oezbekistan",
+    "Colombia": "Colombia",
+    "DR Congo": "DR Congo",
+    "Congo DR": "DR Congo",
+    "Democratic Republic of the Congo": "DR Congo",
+    "England": "Engeland",
+    "Croatia": "Kroatië",
+    "Ghana": "Ghana",
+    "Panama": "Panama",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -112,15 +187,45 @@ ROUND_ORDER: list[str] = ["r32", "r16", "qf", "sf", "3rd", "final"]
 # match_date is de FIFA-datum (lokale stadion-datum) zodat het schema
 # leesbaar blijft.
 KNOCKOUTS: list[dict] = [
-    # Round of 32 — bevestigd op 26 juni 2026
+    # Round of 32 — volledige bracket bevestigd op 28 juni 2026
+    # 28 jun
     {"round": "r32", "date": "2026-06-28", "kickoff": "2026-06-29 00:00",
      "home": "Zuid-Afrika", "away": "Canada"},
+    # 29 jun
     {"round": "r32", "date": "2026-06-29", "kickoff": "2026-06-29 20:00",
      "home": "Brazilië", "away": "Japan"},
-    {"round": "r32", "date": "2026-06-30", "kickoff": "2026-07-01 04:00",
+    {"round": "r32", "date": "2026-06-29", "kickoff": "2026-06-29 22:30",
+     "home": "Duitsland", "away": "Paraguay"},
+    {"round": "r32", "date": "2026-06-29", "kickoff": "2026-06-30 05:00",
      "home": "Nederland", "away": "Marokko"},
-    {"round": "r32", "date": "2026-07-02", "kickoff": "2026-07-03 05:00",
+    # 30 jun
+    {"round": "r32", "date": "2026-06-30", "kickoff": "2026-06-30 20:00",
+     "home": "Ivoorkust", "away": "Noorwegen"},
+    {"round": "r32", "date": "2026-06-30", "kickoff": "2026-06-30 23:00",
+     "home": "Frankrijk", "away": "Zweden"},
+    {"round": "r32", "date": "2026-06-30", "kickoff": "2026-07-01 05:00",
+     "home": "Mexico", "away": "Ecuador"},
+    # 1 jul
+    {"round": "r32", "date": "2026-07-01", "kickoff": "2026-07-01 22:00",
+     "home": "DR Congo", "away": "Engeland"},
+    {"round": "r32", "date": "2026-07-01", "kickoff": "2026-07-02 03:00",
+     "home": "België", "away": "Senegal"},
+    {"round": "r32", "date": "2026-07-01", "kickoff": "2026-07-02 05:00",
      "home": "Verenigde Staten", "away": "Bosnië-Herzegovina"},
+    # 2 jul
+    {"round": "r32", "date": "2026-07-02", "kickoff": "2026-07-02 20:00",
+     "home": "Oostenrijk", "away": "Spanje"},
+    {"round": "r32", "date": "2026-07-02", "kickoff": "2026-07-02 23:00",
+     "home": "Portugal", "away": "Kroatië"},
+    {"round": "r32", "date": "2026-07-02", "kickoff": "2026-07-03 03:00",
+     "home": "Algerije", "away": "Zwitserland"},
+    # 3 jul
+    {"round": "r32", "date": "2026-07-03", "kickoff": "2026-07-03 20:00",
+     "home": "Colombia", "away": "Ghana"},
+    {"round": "r32", "date": "2026-07-03", "kickoff": "2026-07-03 21:00",
+     "home": "Egypte", "away": "Australië"},
+    {"round": "r32", "date": "2026-07-03", "kickoff": "2026-07-03 23:00",
+     "home": "Argentinië", "away": "Kaapverdië"},
 ]
 
 
@@ -216,15 +321,19 @@ def get_conn() -> sqlite3.Connection:
 
 
 def seed_knockouts(con: sqlite3.Connection) -> None:
-    """Voegt nieuwe knockoutwedstrijden toe — bestaande matches (gematcht
-    op ronde + thuis + uit) worden overgeslagen, dus dit is veilig om
-    elke deploy opnieuw te draaien."""
+    """Idempotent: voegt nieuwe knockoutwedstrijden toe en refresht
+    datum/aftrap voor bestaande (gematcht op ronde + thuis + uit).
+    Ingevoerde uitslagen of voorspellingen worden nooit aangetast."""
     for ko in KNOCKOUTS:
-        exists = con.execute(
-            "SELECT 1 FROM matches WHERE round = ? AND home = ? AND away = ?",
+        existing = con.execute(
+            "SELECT id FROM matches WHERE round = ? AND home = ? AND away = ?",
             (ko["round"], ko["home"], ko["away"]),
         ).fetchone()
-        if exists:
+        if existing:
+            con.execute(
+                "UPDATE matches SET match_date = ?, kickoff = ? WHERE id = ?",
+                (ko["date"], ko["kickoff"], existing[0]),
+            )
             continue
         con.execute(
             "INSERT INTO matches(group_code, matchday, match_date, home, away, "
@@ -315,6 +424,121 @@ def set_actual_winner(con: sqlite3.Connection, match_id: int, winner: str | None
         (winner, match_id),
     )
     con.commit()
+
+
+# ---------------------------------------------------------------------------
+# Auto-sync van uitslagen via football-data.org
+# ---------------------------------------------------------------------------
+
+@st.cache_data(ttl=900)  # max 1× per 15 minuten echt naar de API
+def fetch_match_results() -> list[dict] | None:
+    """Haalt alle gespeelde WK 2026 wedstrijden op. Returns lijst met
+    home_en, away_en, home_score, away_score (na 90 min), winner_en
+    (na evt. verlenging/penalty's), of None bij fout."""
+    key = _football_data_api_key()
+    if not key:
+        return None
+    try:
+        r = requests.get(
+            "https://api.football-data.org/v4/competitions/WC/matches",
+            headers={"X-Auth-Token": key},
+            timeout=10,
+        )
+        if r.status_code != 200:
+            return None
+        data = r.json()
+    except Exception:
+        return None
+
+    out: list[dict] = []
+    for m in data.get("matches", []):
+        if m.get("status") != "FINISHED":
+            continue
+        score = m.get("score") or {}
+        full = score.get("fullTime") or {}
+        home_score, away_score = full.get("home"), full.get("away")
+        if home_score is None or away_score is None:
+            continue
+        home_en = (m.get("homeTeam") or {}).get("name")
+        away_en = (m.get("awayTeam") or {}).get("name")
+        if not home_en or not away_en:
+            continue
+
+        duration = score.get("duration", "REGULAR")
+        winner_en: str | None = None
+        if duration == "REGULAR":
+            if home_score > away_score:
+                winner_en = home_en
+            elif away_score > home_score:
+                winner_en = away_en
+        elif duration == "EXTRA_TIME":
+            et = score.get("extraTime") or {}
+            eh, ea = et.get("home"), et.get("away")
+            if eh is not None and ea is not None:
+                if eh > ea:
+                    winner_en = home_en
+                elif ea > eh:
+                    winner_en = away_en
+        elif duration == "PENALTY_SHOOTOUT":
+            p = score.get("penalties") or {}
+            ph, pa = p.get("home"), p.get("away")
+            if ph is not None and pa is not None:
+                if ph > pa:
+                    winner_en = home_en
+                elif pa > ph:
+                    winner_en = away_en
+
+        out.append({
+            "home_en": home_en, "away_en": away_en,
+            "home_score": int(home_score), "away_score": int(away_score),
+            "winner_en": winner_en,
+        })
+    return out
+
+
+def sync_results(con: sqlite3.Connection) -> tuple[int, int, str | None]:
+    """Schrijft API-resultaten naar de DB. Returns (updated, total, error)."""
+    results = fetch_match_results()
+    if results is None:
+        if not _football_data_api_key():
+            return 0, 0, "Geen API-key ingesteld"
+        return 0, 0, "Kon niet ophalen (API down of rate-limit)"
+
+    updated = 0
+    for r in results:
+        home_nl = EN_TO_NL.get(r["home_en"])
+        away_nl = EN_TO_NL.get(r["away_en"])
+        if not home_nl or not away_nl:
+            continue
+        row = con.execute(
+            "SELECT id, actual_home, actual_away, actual_winner, round "
+            "FROM matches WHERE home = ? AND away = ?",
+            (home_nl, away_nl),
+        ).fetchone()
+        if not row:
+            continue
+        mid, cur_h, cur_a, cur_w, rnd = row
+        new_h, new_a = int(r["home_score"]), int(r["away_score"])
+        winner_nl = EN_TO_NL.get(r["winner_en"]) if r["winner_en"] else None
+        changed = False
+        if cur_h != new_h or cur_a != new_a:
+            con.execute(
+                "UPDATE matches SET actual_home=?, actual_away=? WHERE id=?",
+                (new_h, new_a, mid),
+            )
+            changed = True
+        # Winnaar alleen voor knockouts overschrijven, en alleen als de API
+        # er een teruggeeft.
+        if rnd and rnd != "group" and winner_nl and cur_w != winner_nl:
+            con.execute(
+                "UPDATE matches SET actual_winner=? WHERE id=?",
+                (winner_nl, mid),
+            )
+            changed = True
+        if changed:
+            updated += 1
+    con.commit()
+    return updated, len(results), None
 
 
 # ---------------------------------------------------------------------------
@@ -496,6 +720,15 @@ def format_dutch_date(iso: str) -> str:
 # ---------------------------------------------------------------------------
 
 con = get_conn()
+
+# Automatische sync — alleen als er een API-key is ingesteld. De fetch is
+# 15 minuten gecached, dus elke page-load triggert hoogstens 1 echte API-call
+# per kwartier.
+if _football_data_api_key():
+    try:
+        sync_results(con)
+    except Exception:
+        pass
 
 st.markdown(
     """
@@ -782,11 +1015,39 @@ def render_admin_tab():
                 st.error("Onjuist wachtwoord.")
         return
 
+    # Sync-paneel
+    has_api = bool(_football_data_api_key())
+    if has_api:
+        st.markdown(
+            '<div class="card"><h3>📡 Auto-sync</h3>'
+            '<div class="group-meta">Uitslagen worden automatisch elke 15 min opgehaald van football-data.org. Klik op de knop voor een directe sync.</div></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("🔄 Nu syncen", use_container_width=True, key="force_sync"):
+            fetch_match_results.clear()
+            updated, total, err = sync_results(con)
+            if err:
+                st.error(f"Sync mislukt: {err}")
+            else:
+                st.success(f"Gesynchroniseerd — {updated} wedstrijd(en) bijgewerkt op basis van {total} afgeronde matches.")
+            st.rerun()
+    else:
+        st.markdown(
+            '<div class="card"><h3>📡 Auto-sync (uit)</h3>'
+            '<div class="group-meta" style="color:#B45309;">'
+            'Er is geen <code>FOOTBALL_DATA_API_KEY</code> ingesteld. '
+            'Vraag een gratis key aan op <a href="https://www.football-data.org/client/register" target="_blank">football-data.org</a> '
+            '(5 min, geen creditcard) en plak deze in Streamlit Cloud → Settings → Secrets. '
+            'Tot die tijd vul je uitslagen handmatig in.'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )
+
     df = matches_df(con)
 
     st.markdown(
-        '<div class="card"><h3>📥 Uitslagen invoeren</h3>'
-        '<div class="group-meta">Voer per wedstrijd de eindstand na 90 minuten in. Bij knockouts ook de winnaar (na evt. verlenging/penalty\'s).</div></div>',
+        '<div class="card"><h3>📥 Uitslagen invoeren / corrigeren</h3>'
+        '<div class="group-meta">Voer per wedstrijd de eindstand na 90 minuten in. Bij knockouts ook de winnaar (na evt. verlenging/penalty\'s). Bij actieve sync overschrijft de API jouw invoer.</div></div>',
         unsafe_allow_html=True,
     )
 
