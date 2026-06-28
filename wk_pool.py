@@ -393,6 +393,16 @@ def predictions_for(con: sqlite3.Connection, user_id: int) -> dict[int, dict]:
     return {mid: {"home": ph, "away": pa, "winner": pw} for mid, ph, pa, pw in rows}
 
 
+def predictions_for_match(con: sqlite3.Connection, match_id: int) -> list[tuple]:
+    """Alle voorspellingen voor één wedstrijd: (name, pred_home, pred_away, pred_winner)."""
+    return list(con.execute(
+        "SELECT u.name, p.pred_home, p.pred_away, p.pred_winner "
+        "FROM predictions p JOIN users u ON u.id = p.user_id "
+        "WHERE p.match_id = ? ORDER BY u.name COLLATE NOCASE",
+        (match_id,),
+    ).fetchall())
+
+
 def save_prediction(
     con: sqlite3.Connection,
     user_id: int,
@@ -702,6 +712,82 @@ st.markdown(
         padding: 6px 14px; border-radius: 12px; font-weight: 800; font-size: 18px;
     }
     .lb-meta { font-size: 11px; color: #64748B; }
+
+    /* === Reveal-feature: voorspellingen onthuld bij aftrap === */
+    .next-reveal {
+        background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+        color: #78350F;
+        padding: 14px 18px;
+        border-radius: 16px;
+        margin: 10px 0 16px 0;
+        text-align: center;
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35);
+        animation: pulse-glow 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35); }
+        50%      { box-shadow: 0 6px 24px rgba(245, 158, 11, 0.6); }
+    }
+    .next-reveal .countdown {
+        display: inline-block;
+        background: white;
+        color: #B45309;
+        padding: 2px 10px;
+        border-radius: 999px;
+        margin: 0 4px;
+        font-weight: 800;
+    }
+
+    .reveal-card {
+        margin: 10px 0 18px 0;
+        padding: 12px 14px 10px 14px;
+        background: linear-gradient(135deg, #FEF3C7 0%, #FED7AA 100%);
+        border-radius: 14px;
+        border-left: 4px solid #F59E0B;
+    }
+    .reveal-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #92400E;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 8px;
+    }
+    .reveal-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .pred-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 999px;
+        background: white;
+        font-size: 12px;
+        color: #1F2937;
+        border: 1px solid #FDE68A;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .pred-chip b { font-weight: 700; }
+    .pred-chip .score { font-weight: 800; color: #0F172A; }
+    .pred-chip.bullseye {
+        background: linear-gradient(135deg, #10B981, #059669);
+        color: white; border-color: #047857; font-weight: 600;
+    }
+    .pred-chip.bullseye .score { color: white; }
+    .pred-chip.toto {
+        background: #FEF3C7; color: #92400E; border-color: #F59E0B;
+    }
+    .pred-chip.miss { opacity: 0.55; }
+    .pred-chip.bonus { border: 2px solid #8B5CF6; }
+    .reveal-empty {
+        color: #92400E; font-size: 13px; padding: 4px 0;
+        font-style: italic;
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -792,6 +878,98 @@ tab_predict, tab_board, tab_rules, tab_admin = st.tabs(
 # Tab: voorspellen
 # ---------------------------------------------------------------------------
 
+def _render_revealed_predictions(m) -> None:
+    """Toon iedereens voorspelling onder een vergrendelde wedstrijd."""
+    mid = int(m["id"])
+    preds = predictions_for_match(con, mid)
+    has_actual = m["actual_home"] is not None and m["actual_away"] is not None
+    is_ko = m.get("round") and m["round"] != "group"
+
+    title = "🎯 Iedereens voorspelling" if has_actual else "🔓 Voorspellingen onthuld"
+    count = f' <span style="opacity:0.7;font-weight:500;">({len(preds)})</span>' if preds else ""
+
+    if not preds:
+        st.markdown(
+            f'<div class="reveal-card"><div class="reveal-title">{title}</div>'
+            f'<div class="reveal-empty">Niemand heeft een voorspelling ingevoerd 😬</div></div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    chips: list[str] = []
+    for name, ph, pa, pw in preds:
+        score_str = f"{int(ph)}–{int(pa)}"
+        winner_marker = ""
+        if is_ko and pw:
+            winner_marker = f' · <span style="opacity:0.85;">🏆 {pw}</span>'
+        cls = "pred-chip"
+        suffix = ""
+        if has_actual:
+            pts = score_points(int(ph), int(pa), int(m["actual_home"]), int(m["actual_away"]))
+            wb = winner_bonus(pw, m["actual_winner"]) if is_ko else None
+            total = (pts or 0) + (wb or 0)
+            if pts == 3:
+                cls += " bullseye"
+            elif pts == 1:
+                cls += " toto"
+            else:
+                cls += " miss"
+            if wb == 1 and pts != 3:
+                cls += " bonus"
+            suffix = f' · <b>{total}p</b>' if total > 0 else ' · 0p'
+        chips.append(
+            f'<span class="{cls}"><b>{name}</b> '
+            f'<span class="score">{score_str}</span>{winner_marker}{suffix}</span>'
+        )
+
+    st.markdown(
+        f'<div class="reveal-card"><div class="reveal-title">{title}{count}</div>'
+        f'<div class="reveal-chips">{"".join(chips)}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_next_reveal_banner(df: pd.DataFrame) -> None:
+    """Banner voor de eerstvolgende wedstrijd binnen 6 uur die nog niet
+    is begonnen — telt af tot de aftrap (= reveal-moment)."""
+    now = datetime.now(NL_TZ)
+    horizon = 6 * 3600
+    candidates: list[tuple] = []
+    for _, m in df.iterrows():
+        if m["actual_home"] is not None and m["actual_away"] is not None:
+            continue
+        kickoff = m.get("kickoff") if hasattr(m, "get") else m["kickoff"]
+        if not kickoff:
+            continue
+        try:
+            ko = datetime.strptime(str(kickoff), "%Y-%m-%d %H:%M").replace(tzinfo=NL_TZ)
+        except ValueError:
+            continue
+        diff = (ko - now).total_seconds()
+        if 0 < diff <= horizon:
+            candidates.append((ko, m))
+    if not candidates:
+        return
+    candidates.sort(key=lambda x: x[0])
+    ko, m = candidates[0]
+    secs = int((ko - now).total_seconds())
+    h, rem = divmod(secs, 3600)
+    mins = rem // 60
+    if h > 0:
+        countdown = f"{h}u {mins:02d}min"
+    elif mins > 1:
+        countdown = f"{mins} minuten"
+    else:
+        countdown = "minder dan een minuut"
+    st.markdown(
+        f'<div class="next-reveal">🔮 Over <span class="countdown">{countdown}</span> '
+        f'weet iedereen wat jij hebt ingevuld voor '
+        f'<b>{flag(m["home"])} {m["home"]} – {m["away"]} {flag(m["away"])}</b>!'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def _render_match_row(m, pred: dict | None, is_knockout: bool) -> None:
     mid = int(m["id"])
     ph = pred["home"] if pred else None
@@ -862,6 +1040,7 @@ def _render_match_row(m, pred: dict | None, is_knockout: bool) -> None:
         new_winner = None if choice == options[0] else choice
 
     if locked:
+        _render_revealed_predictions(m)
         return
 
     user_id = st.session_state["user_id"]
@@ -882,6 +1061,8 @@ def render_predict_tab():
     preds = predictions_for(con, st.session_state["user_id"])
     total_matches = len(df)
     total_made = sum(1 for mid in df["id"] if mid in preds)
+
+    _render_next_reveal_banner(df)
 
     st.markdown(
         f'<div style="color:white; text-align:center; margin: 6px 0 4px 0; font-size:13px;">'
