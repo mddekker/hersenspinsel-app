@@ -84,10 +84,18 @@ st.html("""
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
   }
 
+  @keyframes hs-aurora {
+    0%,100% { background-position: 0% 0%, 100% 100%, 50% 50%, 0 0; }
+    50%     { background-position: 30% 20%, 70% 80%, 40% 60%, 0 0; }
+  }
   [data-testid="stAppViewContainer"] {
     background:
-      radial-gradient(ellipse 70% 40% at 50% 0%, rgba(180,20,20,0.2) 0%, transparent 65%),
-      #060A12 !important;
+      radial-gradient(ellipse 60% 45% at 20% 10%, rgba(220,38,38,0.28) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 45% at 85% 85%, rgba(99,60,240,0.22) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 55% at 60% 40%, rgba(20,50,120,0.25) 0%, transparent 65%),
+      linear-gradient(160deg, #0B0F1E 0%, #060A12 55%, #0D0714 100%) !important;
+    background-size: 160% 160%, 160% 160%, 180% 180%, 100% 100% !important;
+    animation: hs-aurora 16s ease-in-out infinite;
   }
 
   .block-container {
@@ -101,10 +109,22 @@ st.html("""
   }
 
   .hs-logo {
-    font-size: 11px; font-weight: 700; letter-spacing: 6px;
-    text-transform: uppercase; color: #1E293B;
-    text-align: center; margin-bottom: 80px;
+    font-size: 13px; font-weight: 700; letter-spacing: 7px;
+    text-transform: uppercase; text-align: center; margin-bottom: 14px;
+    background: linear-gradient(90deg, #F87171, #C084FC, #60A5FA);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
   }
+  .hs-exclusive {
+    display: inline-block; margin: 0 auto 64px auto;
+    font-size: 11px; font-weight: 600; letter-spacing: 2.5px;
+    text-transform: uppercase; color: #CBD5E1;
+    padding: 8px 20px; border-radius: 999px;
+    border: 1px solid rgba(200,132,252,0.35);
+    background: linear-gradient(90deg, rgba(220,38,38,0.14), rgba(99,60,240,0.14));
+    box-shadow: 0 0 24px rgba(150,60,220,0.15);
+  }
+  .hs-header { text-align: center; }
 
   .hs-status {
     display:flex; flex-direction:column; align-items:center;
@@ -113,7 +133,24 @@ st.html("""
   .hs-status-icon  { font-size:72px; margin-bottom:24px; line-height:1; }
   .hs-status-title { font-size:28px; font-weight:300; letter-spacing:-0.5px; margin-bottom:10px; }
   .hs-status-sub   { font-size:14px; color:#1E293B; }
-  .hs-done  .hs-status-title { color:#34D399; }
+
+  @keyframes hs-pop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    70%  { transform: scale(1.08); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .hs-done { animation: hs-pop 0.45s cubic-bezier(0.34,1.56,0.64,1); }
+  .hs-done .hs-status-icon {
+    width: 110px; height: 110px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 56px; color: #fff; font-weight: 700;
+    background: linear-gradient(145deg, #34D399 0%, #059669 100%);
+    box-shadow: 0 0 60px rgba(52,211,153,0.45), 0 12px 40px rgba(0,0,0,0.6);
+  }
+  .hs-done .hs-status-title {
+    color: #34D399; font-size: 36px; font-weight: 700; letter-spacing: -0.5px;
+  }
+  .hs-done .hs-status-sub { font-size: 16px; color: #94A3B8; }
   .hs-error .hs-status-title { color:#F87171; }
   .hs-error-detail {
     margin-top:20px; background:#0A0505; border:1px solid #2D1010;
@@ -139,7 +176,12 @@ st.html("""
 """)
 
 # ── UI ─────────────────────────────────────────────────────────────────────────
-st.markdown('<div class="hs-logo">Hersenspinsel</div>', unsafe_allow_html=True)
+st.markdown("""
+<div class="hs-header">
+  <div class="hs-logo">Hersenspinsel</div>
+  <div class="hs-exclusive">✦ Exclusief voor Martin Dekker ✦</div>
+</div>
+""", unsafe_allow_html=True)
 
 phase = st.session_state.phase
 
@@ -174,13 +216,15 @@ if phase == "idle":
   }
 
   #label {
-    font-size: 15px;
-    color: #2D3F55;
-    letter-spacing: 0.5px;
-    margin-bottom: 48px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #F1F5F9;
+    letter-spacing: 0.3px;
+    margin-bottom: 44px;
     transition: color 0.3s;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.6);
   }
-  #label.recording { color: #4A6080; }
+  #label.recording { color: #93C5FD; }
 
   #btn {
     width: 260px;
@@ -225,8 +269,8 @@ if phase == "idle":
 
   #interim {
     margin-top: 32px;
-    font-size: 14px;
-    color: #334155;
+    font-size: 15px;
+    color: #94A3B8;
     text-align: center;
     max-width: 280px;
     min-height: 20px;
@@ -342,8 +386,8 @@ elif phase == "done":
     st.markdown("""
     <div class="hs-status hs-done">
       <div class="hs-status-icon">✓</div>
-      <div class="hs-status-title">Verstuurd</div>
-      <div class="hs-status-sub">Je mail is onderweg</div>
+      <div class="hs-status-title">Mail verzonden!</div>
+      <div class="hs-status-sub">Je hersenspinsels staan in je zakelijke inbox</div>
     </div>
     """, unsafe_allow_html=True)
     if st.button("Nieuwe opname"):
