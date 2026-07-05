@@ -291,6 +291,8 @@ if phase == "idle":
   var isRecording = false;
   var recognition = null;
   var finalText = '';
+  var lastInterim = '';
+  var pendingSend = false;
 
   // Controleer browser-ondersteuning
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -308,24 +310,28 @@ if phase == "idle":
       var interimText = '';
       for (var i = 0; i < e.results.length; i++) {
         if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' ';
-        else interimText += e.results[i][0].transcript;
+        else interimText += e.results[i][0].transcript + ' ';
       }
+      if (interimText.trim()) lastInterim = interimText;
       interim.textContent = interimText || finalText;
     };
 
     recognition.onerror = function(e) {
       console.error('Speech error', e.error);
-      stopRecording();
+      if (isRecording) stopRecording();
     };
 
     recognition.onend = function() {
-      if (isRecording) stopRecording();
+      if (pendingSend) sendTranscript();
+      else if (isRecording) stopRecording();
     };
   }
 
   function startRecording() {
     isRecording = true;
     finalText = '';
+    lastInterim = '';
+    pendingSend = false;
     btn.classList.add('recording');
     label.textContent = 'Tik om te stoppen';
     label.classList.add('recording');
@@ -335,12 +341,22 @@ if phase == "idle":
 
   function stopRecording() {
     isRecording = false;
+    pendingSend = true;
     btn.classList.remove('recording');
     label.textContent = 'Even geduld…';
     label.classList.remove('recording');
     try { recognition.stop(); } catch(e) {}
 
-    var text = finalText.trim();
+    // Safari levert definitieve resultaten vaak pas ná stop();
+    // sendTranscript wordt aangeroepen via onend, met deze timeout als vangnet.
+    setTimeout(function() { if (pendingSend) sendTranscript(); }, 1500);
+  }
+
+  function sendTranscript() {
+    if (!pendingSend) return;
+    pendingSend = false;
+
+    var text = (finalText.trim() || lastInterim.trim());
     if (text) {
       // Stuur transcript naar Streamlit via URL-parameter
       window.parent.location.href =
