@@ -61,8 +61,8 @@ def verstuur_email(onderwerp: str, tekst: str) -> None:
         s.sendmail(smtp_user, EMAIL_TO, msg.as_string())
 
 
-# ── Styling ───────────────────────────────────────────────────────────────────
-st.markdown("""
+# ── CSS via st.html() — werkt betrouwbaar in alle Streamlit versies ──────────
+st.html("""
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -148,10 +148,6 @@ st.markdown("""
 
   [data-testid="stCustomComponentV1"] button:hover {
     transform: scale(1.05) !important;
-    box-shadow:
-      0 0 0 16px rgba(239,68,68,0.10),
-      0 0 0 36px rgba(239,68,68,0.05),
-      0 24px 72px rgba(239,68,68,0.45) !important;
   }
 
   [data-testid="stCustomComponentV1"] button:active {
@@ -203,19 +199,13 @@ st.markdown("""
     padding: 12px 28px !important;
     width: auto !important;
     box-shadow: none !important;
-    letter-spacing: 0.2px !important;
-    transition: border-color 0.15s, color 0.15s !important;
   }
   .stButton > button:hover {
     border-color: #334155 !important;
     color: #94A3B8 !important;
   }
-
-  [data-testid="stSpinner"] > div {
-    border-color: #3B82F6 transparent transparent transparent !important;
-  }
 </style>
-""", unsafe_allow_html=True)
+""")
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 st.markdown('<div class="hs-wordmark">Hersenspinsel</div>', unsafe_allow_html=True)
