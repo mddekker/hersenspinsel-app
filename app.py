@@ -1,3 +1,6 @@
+import time
+from pathlib import Path
+
 import streamlit as st
 import streamlit.components.v1 as components
 import anthropic
@@ -14,9 +17,16 @@ st.set_page_config(
 
 EMAIL_TO = "ma.dekker@humancapitalcare.nl"
 
-for key, val in [("phase", "idle"), ("raw_text", ""), ("error_msg", "")]:
+for key, val in [("phase", "idle"), ("raw_text", ""), ("error_msg", ""), ("last_nonce", 0)]:
     if key not in st.session_state:
         st.session_state[key] = val
+
+# Eigen opname-component (HTML/JS in mic_component/) dat het transcript
+# via het officiële Streamlit component-protocol teruggeeft.
+mic_recorder = components.declare_component(
+    "hersenspinsel_mic",
+    path=str(Path(__file__).parent / "mic_component"),
+)
 
 
 def structureer(tekst: str) -> str:
@@ -59,14 +69,6 @@ def verstuur_email(onderwerp: str, tekst: str) -> None:
         s.login(smtp_user, smtp_pass)
         s.sendmail(smtp_user, EMAIL_TO, msg.as_string())
 
-
-# ── Transcript via URL-parameter ──────────────────────────────────────────────
-transcript = st.query_params.get("transcript", "")
-if transcript and st.session_state.phase == "idle":
-    st.query_params.clear()
-    st.session_state.raw_text = transcript
-    st.session_state.phase = "processing"
-    st.rerun()
 
 # ── Globale stijlen ────────────────────────────────────────────────────────────
 st.html("""
@@ -185,213 +187,14 @@ st.markdown("""
 
 phase = st.session_state.phase
 
-# ── Idle: eigen opnameknop via HTML/JS + Web Speech API ───────────────────────
+# ── Idle: eigen opname-component (Web Speech API) ─────────────────────────────
 if phase == "idle":
-    components.html("""
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  @keyframes pulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6), 0 24px 80px rgba(220,38,38,0.45); }
-    60%      { box-shadow: 0 0 0 36px rgba(220,38,38,0), 0 24px 80px rgba(220,38,38,0.45); }
-  }
-  @keyframes stop-pulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(30,100,255,0.5), 0 24px 80px rgba(30,80,200,0.4); }
-    60%      { box-shadow: 0 0 0 36px rgba(30,100,255,0), 0 24px 80px rgba(30,80,200,0.4); }
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-    overflow: hidden;
-  }
-
-  #label {
-    font-size: 22px;
-    font-weight: 600;
-    color: #F1F5F9;
-    letter-spacing: 0.3px;
-    margin-bottom: 44px;
-    transition: color 0.3s;
-    text-shadow: 0 2px 12px rgba(0,0,0,0.6);
-  }
-  #label.recording { color: #93C5FD; }
-
-  #btn {
-    width: 260px;
-    height: 260px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    outline: none;
-    -webkit-tap-highlight-color: transparent;
-    position: relative;
-    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
-
-    background:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='2' width='6' height='12' rx='3'/%3E%3Cpath d='M5 10a7 7 0 0 0 14 0'/%3E%3Cline x1='12' y1='17' x2='12' y2='21'/%3E%3Cline x1='8' y1='21' x2='16' y2='21'/%3E%3C/svg%3E") no-repeat center / 40%,
-      radial-gradient(circle at 35% 32%, rgba(255,120,120,0.3), transparent 55%),
-      linear-gradient(145deg, #E53E3E 0%, #9B1C1C 100%);
-
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,0.06) inset,
-      0 24px 80px rgba(220,38,38,0.45),
-      0 8px 32px rgba(0,0,0,0.8);
-
-    animation: pulse 2.8s ease-in-out infinite;
-  }
-
-  #btn.recording {
-    background:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Crect x='6' y='6' width='12' height='12' rx='2'/%3E%3C/svg%3E") no-repeat center / 36%,
-      radial-gradient(circle at 35% 32%, rgba(120,160,255,0.3), transparent 55%),
-      linear-gradient(145deg, #3B6EF0 0%, #1A3AA0 100%);
-
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,0.06) inset,
-      0 24px 80px rgba(30,80,200,0.45),
-      0 8px 32px rgba(0,0,0,0.8);
-
-    animation: stop-pulse 1.4s ease-in-out infinite;
-  }
-
-  #btn:hover  { transform: scale(1.06); }
-  #btn:active { transform: scale(0.93); animation: none !important; }
-
-  #interim {
-    margin-top: 32px;
-    font-size: 15px;
-    color: #94A3B8;
-    text-align: center;
-    max-width: 280px;
-    min-height: 20px;
-    letter-spacing: 0.2px;
-    font-style: italic;
-  }
-</style>
-</head>
-<body>
-  <div id="label">Tik om op te nemen</div>
-  <button id="btn"></button>
-  <div id="interim"></div>
-
-<script>
-  var btn      = document.getElementById('btn');
-  var label    = document.getElementById('label');
-  var interim  = document.getElementById('interim');
-  var isRecording = false;
-  var recognition = null;
-  var finalText = '';
-  var lastInterim = '';
-  var pendingSend = false;
-
-  // Controleer browser-ondersteuning
-  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    label.textContent = 'Spraakherkenning niet beschikbaar in deze browser';
-    btn.disabled = true;
-  } else {
-    recognition = new SpeechRecognition();
-    recognition.lang = 'nl-NL';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onresult = function(e) {
-      finalText = '';
-      var interimText = '';
-      for (var i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' ';
-        else interimText += e.results[i][0].transcript + ' ';
-      }
-      if (interimText.trim()) lastInterim = interimText;
-      interim.textContent = interimText || finalText;
-    };
-
-    recognition.onerror = function(e) {
-      console.error('Speech error', e.error);
-      if (isRecording) stopRecording();
-    };
-
-    recognition.onend = function() {
-      if (pendingSend) sendTranscript();
-      else if (isRecording) stopRecording();
-    };
-  }
-
-  function startRecording() {
-    isRecording = true;
-    finalText = '';
-    lastInterim = '';
-    pendingSend = false;
-    btn.classList.add('recording');
-    label.textContent = 'Tik om te stoppen';
-    label.classList.add('recording');
-    interim.textContent = '';
-    recognition.start();
-  }
-
-  function stopRecording() {
-    isRecording = false;
-    pendingSend = true;
-    btn.classList.remove('recording');
-    label.textContent = 'Even geduld…';
-    label.classList.remove('recording');
-    try { recognition.stop(); } catch(e) {}
-
-    // Safari levert definitieve resultaten vaak pas ná stop();
-    // sendTranscript wordt aangeroepen via onend, met deze timeout als vangnet.
-    setTimeout(function() { if (pendingSend) sendTranscript(); }, 1500);
-  }
-
-  function sendTranscript() {
-    if (!pendingSend) return;
-    pendingSend = false;
-
-    var text = (finalText.trim() || lastInterim.trim());
-    if (text) {
-      // Stuur transcript naar Streamlit via URL-parameter.
-      // Op Streamlit Cloud draait dit in een cross-origin iframe:
-      // parent.location LEZEN mag niet (SecurityError), maar ZETTEN wel.
-      // Het adres van de hoofdpagina halen we daarom uit document.referrer.
-      var target = '?transcript=' + encodeURIComponent(text);
-      var base = '';
-      try { base = window.parent.location.pathname; } catch (err) {}
-      if (!base) {
-        var ref = document.referrer || '';
-        base = ref ? ref.split('?')[0].split('#')[0] : '/';
-      }
-      try { window.parent.location.href = base + target; }
-      catch (err2) {
-        try { window.top.location.href = base + target; }
-        catch (err3) {
-          label.textContent = 'Doorsturen mislukt — probeer opnieuw';
-          setTimeout(function() { label.textContent = 'Tik om op te nemen'; }, 2500);
-        }
-      }
-    } else {
-      label.textContent = 'Niets gehoord — probeer opnieuw';
-      setTimeout(function() { label.textContent = 'Tik om op te nemen'; }, 2000);
-    }
-  }
-
-  btn.addEventListener('click', function() {
-    if (!recognition) return;
-    if (isRecording) stopRecording();
-    else startRecording();
-  });
-</script>
-</body>
-</html>
-""", height=440, scrolling=False)
+    result = mic_recorder(key="mic", default=None)
+    if result and result.get("text") and result.get("nonce") != st.session_state.last_nonce:
+        st.session_state.last_nonce = result["nonce"]
+        st.session_state.raw_text = result["text"]
+        st.session_state.phase = "processing"
+        st.rerun()
 
 # ── Processing ─────────────────────────────────────────────────────────────────
 elif phase == "processing":
@@ -425,17 +228,11 @@ elif phase == "done":
         st.session_state.phase = "idle"
         st.session_state.raw_text = ""
         st.rerun()
-    components.html("""<script>
-setTimeout(function() {
-  try { window.parent.location.reload(); }
-  catch (err) {
-    var ref = document.referrer || '';
-    var base = ref ? ref.split('?')[0].split('#')[0] : '/';
-    try { window.parent.location.href = base; }
-    catch (err2) { try { window.top.location.href = base; } catch (err3) {} }
-  }
-}, 5000);
-</script>""", height=0)
+    # Automatisch terug naar het opnamescherm na 5 seconden
+    time.sleep(5)
+    st.session_state.phase = "idle"
+    st.session_state.raw_text = ""
+    st.rerun()
 
 # ── Error ──────────────────────────────────────────────────────────────────────
 elif phase == "error":
