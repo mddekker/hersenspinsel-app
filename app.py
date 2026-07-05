@@ -1,7 +1,10 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import anthropic
-import urllib.parse
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from streamlit_mic_recorder import speech_to_text
 
 st.set_page_config(
     page_title="Hersenspinsel",
@@ -10,359 +13,281 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# --- Styling ---
-st.markdown(
-    """
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Hersenspinsel">
-
-<style>
-    #MainMenu, footer, header, .stDeployButton { display: none !important; }
-
-    html, body, [data-testid="stAppViewContainer"] {
-        background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
-        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-    }
-    .block-container {
-        padding-top: 2.5rem !important;
-        padding-bottom: 2rem !important;
-        max-width: 520px !important;
-    }
-    .app-title {
-        font-size: 32px; font-weight: 700; color: #0F172A;
-        text-align: center; margin-bottom: 4px; letter-spacing: -0.5px;
-    }
-    .app-subtitle {
-        font-size: 15px; color: #64748B; text-align: center;
-        margin-bottom: 24px; font-weight: 400;
-    }
-
-    /* Reset/secundaire knop */
-    .stButton > button {
-        background: white !important; color: #475569 !important;
-        border: 1px solid #E2E8F0 !important; border-radius: 14px !important;
-        padding: 16px !important; font-size: 15px !important;
-        font-weight: 500 !important; width: 100% !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
-    }
-
-    .result-card {
-        background: white; border-radius: 20px; padding: 24px;
-        margin-top: 24px; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
-        border: 1px solid #E2E8F0;
-    }
-    .result-card h3 {
-        margin-top: 0; font-size: 13px; text-transform: uppercase;
-        letter-spacing: 1px; color: #64748B; font-weight: 600;
-    }
-
-    .mail-button {
-        display: flex; align-items: center; justify-content: center; gap: 8px;
-        width: 100%; height: 64px;
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-        color: white !important; text-decoration: none !important;
-        font-size: 18px; font-weight: 600; border-radius: 16px;
-        margin-top: 16px; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
-    }
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
 EMAIL_TO = "ma.dekker@humancapitalcare.nl"
 
-
-def get_api_key() -> str:
-    try:
-        return st.secrets["ANTHROPIC_API_KEY"]
-    except Exception:
-        return ""
+for key, val in [("phase", "idle"), ("raw_text", ""), ("error_msg", "")]:
+    if key not in st.session_state:
+        st.session_state[key] = val
 
 
-def structureer_als_todo(api_key: str, ruwe_tekst: str) -> str:
-    client = anthropic.Anthropic(api_key=api_key)
-    prompt = f"""Hieronder volgt een ingesproken brain dump van Martin, algemeen directeur van HumanCapitalCare.
-Het bevat hersenspinsels: vaak to-do's zoals mensen terugbellen, dingen uitzoeken, afspraken inplannen.
-
-Structureer dit als een overzichtelijke to-do lijst in het Nederlands.
-
-Regels:
-- Begin direct met de lijst, geen inleiding of afsluiting
-- Groepeer per categorie waar logisch: "📞 Bellen", "🔍 Uitzoeken", "📅 Afspraken", "✉️ Mailen", "💭 Overig"
-- Elk actiepunt op een eigen regel, beginnend met "- "
-- Behoud alle informatie en context
-- Maak het scanbaar — korte, krachtige formuleringen
-
-Hersenspinsels:
-{ruwe_tekst}
-"""
+def structureer(tekst: str) -> str:
+    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
     response = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{
+            "role": "user",
+            "content": f"""Structureer deze ingesproken brain dump van Martin (directeur HumanCapitalCare) als een to-do lijst in het Nederlands.
+
+Regels:
+- Begin direct met de lijst, geen inleiding of afsluiting
+- Groepeer per categorie: "📞 Bellen", "🔍 Uitzoeken", "📅 Afspraken", "✉️ Mailen", "💭 Overig"
+- Elk actiepunt op eigen regel met "- "
+- Kort en krachtig
+
+Brain dump:
+{tekst}""",
+        }],
     )
     return response.content[0].text.strip()
 
 
-# --- Header ---
-st.markdown('<div class="app-title">🧠 Hersenspinsel</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="app-subtitle">Tik op de knop, spreek je gedachten in, klaar.</div>',
-    unsafe_allow_html=True,
-)
+def verstuur_email(onderwerp: str, tekst: str) -> None:
+    smtp_host = st.secrets.get("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = int(st.secrets.get("SMTP_PORT", 587))
+    smtp_user = st.secrets["SMTP_USER"]
+    smtp_pass = st.secrets["SMTP_PASS"]
 
-# Init state
-if "structured" not in st.session_state:
-    st.session_state["structured"] = ""
-if "raw_text" not in st.session_state:
-    st.session_state["raw_text"] = ""
+    msg = MIMEMultipart()
+    msg["Subject"] = onderwerp
+    msg["From"] = smtp_user
+    msg["To"] = EMAIL_TO
+    msg.attach(MIMEText(tekst, "plain", "utf-8"))
 
-# Lees query param (komt binnen via custom HTML knop hieronder)
-qp_text = st.query_params.get("spinsel", "")
-if qp_text and qp_text != st.session_state.get("raw_text", ""):
-    st.session_state["raw_text"] = qp_text
-    st.query_params.clear()
-    api_key = get_api_key()
-    if not api_key:
-        st.error("API key niet gevonden — check de Streamlit-secrets.")
-    else:
-        with st.spinner("Even structureren…"):
-            try:
-                st.session_state["structured"] = structureer_als_todo(api_key, qp_text)
-            except Exception as e:
-                st.error(f"Fout: {e}")
+    with smtplib.SMTP(smtp_host, smtp_port) as s:
+        s.ehlo()
+        s.starttls()
+        s.login(smtp_user, smtp_pass)
+        s.sendmail(smtp_user, EMAIL_TO, msg.as_string())
 
-# --- DE GROTE RONDE OPNAMEKNOP (volledig custom HTML/JS) ---
-components.html(
-    """
-<!DOCTYPE html>
-<html>
-<head>
+
+# ── Styling ───────────────────────────────────────────────────────────────────
+st.markdown("""
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Hersenspinsel">
 <style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; padding: 30px 0 20px 0; background: transparent;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-    display: flex; flex-direction: column; align-items: center;
+  #MainMenu, footer, header, .stDeployButton,
+  [data-testid="stToolbar"], [data-testid="stDecoration"] {
+    display: none !important;
   }
-  #micbtn {
-    width: 240px; height: 240px; border-radius: 50%;
-    background: linear-gradient(145deg, #EF4444 0%, #DC2626 100%);
-    color: white; border: none; font-size: 96px;
-    line-height: 1; cursor: pointer;
-    box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35);
-    transition: transform 0.15s ease;
-    animation: pulse 2.5s ease-out infinite;
-    display: flex; align-items: center; justify-content: center;
-    -webkit-tap-highlight-color: transparent;
+
+  html, body, [data-testid="stAppViewContainer"] {
+    background: #080D1A !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    color: #E2E8F0;
   }
-  @keyframes pulse {
-    0%   { box-shadow: 0 20px 50px rgba(220,38,38,0.35), 0 0 0 0 rgba(239,68,68,0.5); }
-    70%  { box-shadow: 0 20px 50px rgba(220,38,38,0.35), 0 0 0 30px rgba(239,68,68,0); }
-    100% { box-shadow: 0 20px 50px rgba(220,38,38,0.35), 0 0 0 0 rgba(239,68,68,0); }
+
+  .block-container {
+    padding: 0 24px !important;
+    max-width: 440px !important;
+    min-height: 100svh;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
   }
-  #micbtn:active { transform: scale(0.95); }
-  #micbtn.recording {
-    background: linear-gradient(145deg, #1F2937 0%, #111827 100%);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
-    animation: recording-pulse 1.2s ease-out infinite;
+
+  .hs-wordmark {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #334155;
+    text-align: center;
+    margin-bottom: 72px;
   }
-  @keyframes recording-pulse {
-    0%   { box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 0 0 rgba(220,38,38,0.7); }
-    100% { box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 0 40px rgba(220,38,38,0); }
+
+  .hs-status {
+    font-size: 20px;
+    font-weight: 300;
+    color: #64748B;
+    text-align: center;
+    margin-bottom: 52px;
+    line-height: 1.6;
+    min-height: 64px;
   }
-  #status {
-    margin-top: 20px; color: #64748B; font-size: 14px;
-    min-height: 22px; text-align: center; max-width: 320px;
-    padding: 0 16px;
+
+  .hs-ring {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(239,68,68,0.10) 0%, transparent 70%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 52px auto;
+  }
+
+  [data-testid="stCustomComponentV1"] {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  [data-testid="stCustomComponentV1"] button {
+    width: 160px !important;
+    height: 160px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(145deg, #EF4444 0%, #B91C1C 100%) !important;
+    color: white !important;
+    border: none !important;
+    font-size: 54px !important;
+    font-weight: 400 !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+    letter-spacing: 0 !important;
+    box-shadow:
+      0 0 0 12px rgba(239,68,68,0.08),
+      0 0 0 28px rgba(239,68,68,0.04),
+      0 20px 60px rgba(239,68,68,0.35) !important;
+    transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+    cursor: pointer !important;
+  }
+
+  [data-testid="stCustomComponentV1"] button:hover {
+    transform: scale(1.05) !important;
+    box-shadow:
+      0 0 0 16px rgba(239,68,68,0.10),
+      0 0 0 36px rgba(239,68,68,0.05),
+      0 24px 72px rgba(239,68,68,0.45) !important;
+  }
+
+  [data-testid="stCustomComponentV1"] button:active {
+    transform: scale(0.97) !important;
+  }
+
+  .hs-hint {
+    font-size: 13px;
+    color: #1E293B;
+    text-align: center;
+    letter-spacing: 0.5px;
+    margin-top: -36px;
+  }
+
+  .hs-done {
+    width: 100%;
+    background: #0C1929;
+    border: 1px solid #1E3A5F;
+    border-radius: 24px;
+    padding: 48px 32px;
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .hs-done-icon { font-size: 56px; margin-bottom: 16px; line-height: 1; }
+  .hs-done-title { font-size: 24px; font-weight: 500; color: #38BDF8; margin-bottom: 8px; }
+  .hs-done-sub { font-size: 14px; color: #334155; }
+
+  .hs-error {
+    width: 100%;
+    background: #160A0A;
+    border: 1px solid #3F1515;
+    border-radius: 24px;
+    padding: 28px 24px;
+    text-align: center;
+    color: #FCA5A5;
+    font-size: 14px;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .stButton { display: flex; justify-content: center; }
+  .stButton > button {
+    background: transparent !important;
+    border: 1px solid #1E293B !important;
+    color: #475569 !important;
+    border-radius: 999px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    padding: 12px 28px !important;
+    width: auto !important;
+    box-shadow: none !important;
+    letter-spacing: 0.2px !important;
+    transition: border-color 0.15s, color 0.15s !important;
+  }
+  .stButton > button:hover {
+    border-color: #334155 !important;
+    color: #94A3B8 !important;
+  }
+
+  [data-testid="stSpinner"] > div {
+    border-color: #3B82F6 transparent transparent transparent !important;
   }
 </style>
-</head>
-<body>
-  <button id="micbtn">🎙</button>
-  <div id="status">Tik om te beginnen</div>
-  <form id="navForm" method="get" action="" target="_top" style="display:none;">
-    <input type="hidden" name="spinsel" id="spinselField">
-  </form>
-  <div id="fallback-link" style="margin-top:20px;display:none;"></div>
-  <script>
-    const btn = document.getElementById('micbtn');
-    const status = document.getElementById('status');
-    let recognition = null;
-    let recording = false;
-    let fullText = '';
-    let interimText = '';
-    let manuallyStopped = false;
+""", unsafe_allow_html=True)
 
-    function handleTap(e) {
-      if (e) e.preventDefault();
-      if (!recording) startRec(); else stopRec();
-    }
-    btn.addEventListener('click', handleTap);
-    btn.addEventListener('touchend', handleTap);
+# ── UI ────────────────────────────────────────────────────────────────────────
+st.markdown('<div class="hs-wordmark">Hersenspinsel</div>', unsafe_allow_html=True)
 
-    function startRec() {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) {
-        status.textContent = '❌ Spraakherkenning niet ondersteund. Gebruik Safari op iPhone.';
-        return;
-      }
-      recognition = new SR();
-      recognition.lang = 'nl-NL';
-      // continuous=false werkt veel betrouwbaarder op iOS Safari
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      fullText = '';
-      interimText = '';
-      manuallyStopped = false;
+phase = st.session_state.phase
 
-      recognition.onresult = (e) => {
-        interimText = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          if (e.results[i].isFinal) fullText += e.results[i][0].transcript + ' ';
-          else interimText += e.results[i][0].transcript;
-        }
-        const display = (fullText + interimText).trim();
-        status.textContent = display.length > 80 ? '...' + display.slice(-80) : display;
-      };
-
-      recognition.onerror = (e) => {
-        if (e.error === 'no-speech' || e.error === 'aborted') return;
-        status.textContent = 'Fout: ' + e.error + '. Probeer opnieuw.';
-        recording = false;
-        btn.textContent = '🎙';
-        btn.classList.remove('recording');
-      };
-
-      recognition.onend = () => {
-        // Auto-stop na pauze OF handmatig gestopt → verwerken
-        if (recording) finishRec();
-      };
-
-      try { recognition.start(); } catch(e) {
-        status.textContent = 'Kon niet starten: ' + e.message;
-        return;
-      }
-      recording = true;
-      btn.textContent = '⏹';
-      btn.classList.add('recording');
-      status.textContent = '🔴 Aan het luisteren — tik om te stoppen';
-    }
-
-    function stopRec() {
-      // BELANGRIJK: alles synchroon in user-click context, anders blokkeert iOS de navigatie
-      manuallyStopped = true;
-      recording = false;
-      btn.textContent = '⏳';
-      btn.classList.remove('recording');
-
-      const text = (fullText + ' ' + interimText).trim();
-
-      // Stop recognition op de achtergrond (we wachten niet op het resultaat)
-      if (recognition) {
-        try {
-          recognition.onend = null;
-          recognition.onresult = null;
-          recognition.abort();
-        } catch(e) {}
-      }
-
-      if (!text) {
-        status.textContent = 'Niets opgenomen. Probeer opnieuw.';
-        btn.textContent = '🎙';
-        return;
-      }
-
-      status.textContent = 'Verwerken...';
-      navigateWithText(text);
-    }
-
-    function finishRec() {
-      // Wordt aangeroepen bij auto-stop (na pauze)
-      if (!recording) return;
-      recording = false;
-      btn.textContent = '⏳';
-      btn.classList.remove('recording');
-
-      const text = (fullText + ' ' + interimText).trim();
-      if (!text) {
-        status.textContent = 'Niets opgenomen. Probeer opnieuw.';
-        btn.textContent = '🎙';
-        return;
-      }
-
-      status.textContent = 'Verwerken...';
-      navigateWithText(text);
-    }
-
-    function navigateWithText(text) {
-      // Bouw parent URL op
-      let parentPath = '/';
-      try { parentPath = window.parent.location.pathname; } catch(e) {}
-
-      // Methode 1: form submit met target="_top" (werkt in sandboxed iframes)
-      try {
-        const form = document.getElementById('navForm');
-        const field = document.getElementById('spinselField');
-        field.value = text;
-        form.action = parentPath;
-        form.submit();
-        // Geef het 800ms om te navigeren, anders fallback
-        setTimeout(() => showFallback(text, parentPath), 800);
-        return;
-      } catch(e) {}
-
-      showFallback(text, parentPath);
-    }
-
-    function showFallback(text, parentPath) {
-      // Toon een knop die de user moet tikken — anchor met target=_top werkt altijd
-      const div = document.getElementById('fallback-link');
-      const url = parentPath + '?spinsel=' + encodeURIComponent(text);
-      div.innerHTML = '<a href="' + url + '" target="_top" style="display:block;padding:20px 24px;background:linear-gradient(135deg,#10B981,#059669);color:white;text-decoration:none;border-radius:14px;text-align:center;font-size:17px;font-weight:600;box-shadow:0 8px 24px rgba(16,185,129,0.3);">➡️ Tik hier om door te gaan</a>';
-      div.style.display = 'block';
-      status.textContent = 'Bijna klaar — tik op de groene knop:';
-      btn.textContent = '🎙';
-    }
-  </script>
-</body>
-</html>
-""",
-    height=360,
-)
-
-# --- Resultaat tonen ---
-if st.session_state["structured"]:
+if phase == "idle":
     st.markdown(
-        f"""
-<div class="result-card">
-<h3>To-do lijst</h3>
-{st.session_state["structured"]}
-</div>
-""",
+        '<div class="hs-status">Tik en spreek je<br>gedachten in</div>',
         unsafe_allow_html=True,
     )
-
-    subject = "Hersenspinsels"
-    body = (
-        f"{st.session_state['structured']}\n\n"
-        f"---\n\n"
-        f"Letterlijke opname:\n{st.session_state['raw_text']}"
+    st.markdown('<div class="hs-ring">', unsafe_allow_html=True)
+    text = speech_to_text(
+        language="nl-NL",
+        start_prompt="🎙",
+        stop_prompt="⏹",
+        just_once=True,
+        use_container_width=False,
+        key="stt",
     )
-    mailto = (
-        f"mailto:{EMAIL_TO}"
-        f"?subject={urllib.parse.quote(subject)}"
-        f"&body={urllib.parse.quote(body)}"
-    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hs-hint">tik om op te nemen</div>', unsafe_allow_html=True)
 
+    if text and text.strip():
+        st.session_state.raw_text = text.strip()
+        st.session_state.phase = "processing"
+        st.rerun()
+
+elif phase == "processing":
     st.markdown(
-        f'<a href="{mailto}" class="mail-button">📧 Verstuur naar mijn mail</a>',
+        '<div class="hs-status">Verwerken en<br>versturen…</div>',
         unsafe_allow_html=True,
     )
+    with st.spinner(""):
+        try:
+            gestructureerd = structureer(st.session_state.raw_text)
+            body = (
+                f"{gestructureerd}"
+                f"\n\n---\n\nLetterlijke opname:\n{st.session_state.raw_text}"
+            )
+            verstuur_email("Hersenspinsels", body)
+            st.session_state.phase = "done"
+        except Exception as e:
+            st.session_state.error_msg = str(e)
+            st.session_state.phase = "error"
+    st.rerun()
 
-    if st.button("Nieuwe hersenspinsel", use_container_width=True, key="reset"):
-        st.session_state["structured"] = ""
-        st.session_state["raw_text"] = ""
+elif phase == "done":
+    st.markdown("""
+    <div class="hs-done">
+      <div class="hs-done-icon">✓</div>
+      <div class="hs-done-title">Verstuurd</div>
+      <div class="hs-done-sub">Je mail is onderweg</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("Nieuwe opname"):
+        st.session_state.phase = "idle"
+        st.session_state.raw_text = ""
+        st.rerun()
+
+    components.html("""
+    <script>
+      setTimeout(function() { window.parent.location.reload(); }, 5000);
+    </script>
+    """, height=0)
+
+elif phase == "error":
+    st.markdown(
+        f'<div class="hs-error">⚠ {st.session_state.error_msg}</div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("Opnieuw proberen"):
+        st.session_state.phase = "idle"
         st.rerun()
