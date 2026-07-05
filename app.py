@@ -61,34 +61,39 @@ def verstuur_email(onderwerp: str, tekst: str) -> None:
         s.sendmail(smtp_user, EMAIL_TO, msg.as_string())
 
 
-st.html("""
+# SVG mic icon (wit, Feather-stijl) als data-URI voor in de CSS
+MIC_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='2' width='6' height='12' rx='3'/%3E%3Cpath d='M5 10a7 7 0 0 0 14 0'/%3E%3Cline x1='12' y1='17' x2='12' y2='21'/%3E%3Cline x1='8' y1='21' x2='16' y2='21'/%3E%3C/svg%3E"
+STOP_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' stroke='none'%3E%3Crect x='5' y='5' width='14' height='14' rx='2'/%3E%3C/svg%3E"
+
+st.html(f"""
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Hersenspinsel">
 <style>
-  @keyframes pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.5), 0 32px 80px rgba(239,68,68,0.4); }
-    70%  { box-shadow: 0 0 0 32px rgba(239,68,68,0), 0 32px 80px rgba(239,68,68,0.4); }
-    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0), 0 32px 80px rgba(239,68,68,0.4); }
-  }
+  @keyframes breathe {{
+    0%, 100% {{ box-shadow: 0 0 0 0 rgba(220,38,38,0.5), 0 24px 80px rgba(220,38,38,0.45); }}
+    50%       {{ box-shadow: 0 0 0 28px rgba(220,38,38,0), 0 24px 80px rgba(220,38,38,0.45); }}
+  }}
 
   #MainMenu, footer, header, .stDeployButton,
   [data-testid="stToolbar"], [data-testid="stDecoration"],
-  [data-testid="stStatusWidget"] {
+  [data-testid="stStatusWidget"] {{
     display: none !important;
-  }
+  }}
 
-  html, body {
-    background: #05090F !important;
+  html, body {{
+    background: #060A12 !important;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-  }
+  }}
 
-  [data-testid="stAppViewContainer"] {
-    background: radial-gradient(ellipse 80% 60% at 50% 0%, #1a0a0a 0%, #05090F 60%) !important;
-  }
+  [data-testid="stAppViewContainer"] {{
+    background:
+      radial-gradient(ellipse 70% 40% at 50% 0%, rgba(180,20,20,0.18) 0%, transparent 70%),
+      #060A12 !important;
+  }}
 
-  .block-container {
+  .block-container {{
     padding: 0 !important;
     max-width: 480px !important;
     min-height: 100svh;
@@ -96,159 +101,165 @@ st.html("""
     flex-direction: column !important;
     justify-content: center !important;
     align-items: center !important;
-  }
+    gap: 0 !important;
+  }}
 
-  /* Header */
-  .hs-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 64px;
-  }
-  .hs-logo {
+  /* Logo */
+  .hs-logo {{
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 5px;
+    letter-spacing: 6px;
     text-transform: uppercase;
     color: #1E293B;
-    margin-bottom: 0;
-  }
-
-  /* Mic button area */
-  .hs-mic-area {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 32px;
-    margin-bottom: 56px;
-  }
-
-  .hs-label {
-    font-size: 16px;
-    font-weight: 400;
-    color: #475569;
-    letter-spacing: 0.3px;
     text-align: center;
-  }
+    margin-bottom: 80px;
+  }}
 
-  /* The mic button via the custom component */
-  [data-testid="stCustomComponentV1"] {
+  /* Label boven de knop */
+  .hs-label {{
+    font-size: 15px;
+    font-weight: 400;
+    color: #334155;
+    letter-spacing: 0.5px;
+    text-align: center;
+    margin-bottom: 40px;
+  }}
+
+  /* De knop zelf */
+  [data-testid="stCustomComponentV1"] {{
     display: flex !important;
     justify-content: center !important;
     width: 100% !important;
-  }
+  }}
 
-  [data-testid="stCustomComponentV1"] button {
-    width: 200px !important;
-    height: 200px !important;
+  [data-testid="stCustomComponentV1"] button {{
+    width: 240px !important;
+    height: 240px !important;
     border-radius: 50% !important;
-    background: radial-gradient(circle at 35% 35%, #FF6B6B, #C0392B) !important;
-    color: white !important;
+
+    /* Rijke rode gradiënt */
+    background:
+      radial-gradient(circle at 38% 32%, rgba(255,120,120,0.35), transparent 55%),
+      radial-gradient(circle at 65% 70%, rgba(100,0,0,0.5), transparent 50%),
+      linear-gradient(145deg, #E53E3E 0%, #9B1C1C 100%) !important;
+
+    /* Verberg het emoji-lettertype, toon de SVG mic */
+    color: transparent !important;
+    font-size: 0 !important;
+    background-image:
+      url("{MIC_SVG}"),
+      radial-gradient(circle at 38% 32%, rgba(255,120,120,0.35), transparent 55%),
+      radial-gradient(circle at 65% 70%, rgba(100,0,0,0.5), transparent 50%),
+      linear-gradient(145deg, #E53E3E 0%, #9B1C1C 100%) !important;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat !important;
+    background-position: center, center, center, center !important;
+    background-size: 42%, auto, auto, auto !important;
+
     border: none !important;
-    font-size: 72px !important;
-    font-weight: 400 !important;
-    line-height: 1 !important;
     padding: 0 !important;
     letter-spacing: 0 !important;
+
     box-shadow:
-      0 0 0 1px rgba(255,255,255,0.05) inset,
-      0 32px 80px rgba(239,68,68,0.4),
-      0 8px 24px rgba(0,0,0,0.6) !important;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+      0 0 0 1px rgba(255,255,255,0.06) inset,
+      0 24px 80px rgba(220,38,38,0.45),
+      0 8px 32px rgba(0,0,0,0.7) !important;
+
+    animation: breathe 3s ease-in-out infinite !important;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     cursor: pointer !important;
     -webkit-tap-highlight-color: transparent !important;
-  }
+  }}
 
-  [data-testid="stCustomComponentV1"] button:hover {
-    transform: scale(1.07) !important;
-  }
+  [data-testid="stCustomComponentV1"] button:hover {{
+    transform: scale(1.06) !important;
+  }}
 
-  [data-testid="stCustomComponentV1"] button:active {
-    transform: scale(0.94) !important;
-    animation: pulse 1s ease-out infinite !important;
-  }
+  [data-testid="stCustomComponentV1"] button:active {{
+    transform: scale(0.93) !important;
+    animation: none !important;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.06) inset,
+      0 0 0 40px rgba(220,38,38,0.08),
+      0 8px 32px rgba(0,0,0,0.7) !important;
+  }}
 
-  /* Status states */
-  .hs-status {
+  /* Statusschermen */
+  .hs-status {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    padding: 0 32px;
-  }
-  .hs-status-icon {
-    font-size: 64px;
-    margin-bottom: 20px;
+    padding: 0 40px;
+  }}
+  .hs-status-icon {{
+    font-size: 72px;
+    margin-bottom: 24px;
     line-height: 1;
-  }
-  .hs-status-title {
-    font-size: 26px;
+  }}
+  .hs-status-title {{
+    font-size: 28px;
     font-weight: 300;
-    color: #94A3B8;
-    margin-bottom: 8px;
-    letter-spacing: -0.3px;
-  }
-  .hs-status-sub {
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+  }}
+  .hs-status-sub {{
     font-size: 14px;
     color: #1E293B;
-    letter-spacing: 0.2px;
-  }
+    letter-spacing: 0.3px;
+  }}
 
-  /* Done state */
-  .hs-done-title { color: #34D399 !important; }
+  .hs-done .hs-status-title  {{ color: #34D399; }}
+  .hs-error .hs-status-title {{ color: #F87171; }}
 
-  /* Error state */
-  .hs-error-title { color: #F87171 !important; }
-  .hs-error-detail {
-    background: #0F0A0A;
-    border: 1px solid #2D1515;
-    border-radius: 12px;
-    padding: 16px 20px;
+  .hs-error-detail {{
     margin-top: 20px;
-    font-size: 13px;
-    color: #7F1D1D;
+    background: #0A0505;
+    border: 1px solid #2D1010;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 12px;
+    color: #5C2020;
     font-family: monospace;
     word-break: break-all;
-  }
+    max-width: 360px;
+  }}
 
-  /* Secondary button */
-  .stButton { display: flex; justify-content: center; margin-top: 40px; }
-  .stButton > button {
+  /* Knop onderaan */
+  .stButton {{ display: flex; justify-content: center; margin-top: 48px; }}
+  .stButton > button {{
     background: transparent !important;
-    border: 1px solid #1E293B !important;
-    color: #334155 !important;
+    border: 1px solid #1A2535 !important;
+    color: #2D3F55 !important;
     border-radius: 999px !important;
     font-size: 14px !important;
     font-weight: 500 !important;
-    padding: 14px 32px !important;
+    padding: 14px 36px !important;
     width: auto !important;
     box-shadow: none !important;
     letter-spacing: 0.3px !important;
     transition: all 0.2s ease !important;
-  }
-  .stButton > button:hover {
-    border-color: #334155 !important;
-    color: #64748B !important;
-    background: #0D1520 !important;
-  }
+  }}
+  .stButton > button:hover {{
+    border-color: #2D3F55 !important;
+    color: #4A6080 !important;
+  }}
 
-  /* Spinner */
-  [data-testid="stSpinner"] { display: flex; justify-content: center; }
-  [data-testid="stSpinner"] > div {
-    width: 40px !important;
-    height: 40px !important;
+  [data-testid="stSpinner"] {{ display: flex; justify-content: center; }}
+  [data-testid="stSpinner"] > div {{
+    width: 44px !important; height: 44px !important;
     border-width: 3px !important;
-    border-color: #EF4444 transparent transparent transparent !important;
-  }
+    border-color: #DC2626 transparent transparent transparent !important;
+  }}
 </style>
 """)
 
-# ── UI ────────────────────────────────────────────────────────────────────────
-st.markdown('<div class="hs-header"><div class="hs-logo">Hersenspinsel</div></div>', unsafe_allow_html=True)
+# ── UI ─────────────────────────────────────────────────────────────────────────
+st.markdown('<div class="hs-logo">Hersenspinsel</div>', unsafe_allow_html=True)
 
 phase = st.session_state.phase
 
-# ── Idle ─────────────────────────────────────────────────────────────────────
 if phase == "idle":
-    st.markdown('<div class="hs-label">Spreek je gedachten in</div>', unsafe_allow_html=True)
-
+    st.markdown('<div class="hs-label">Tik om op te nemen</div>', unsafe_allow_html=True)
     text = speech_to_text(
         language="nl-NL",
         start_prompt="🎙",
@@ -257,28 +268,22 @@ if phase == "idle":
         use_container_width=False,
         key="stt",
     )
-
     if text and text.strip():
         st.session_state.raw_text = text.strip()
         st.session_state.phase = "processing"
         st.rerun()
 
-# ── Processing ────────────────────────────────────────────────────────────────
 elif phase == "processing":
     st.markdown("""
     <div class="hs-status">
-      <div class="hs-status-title">Verwerken…</div>
+      <div class="hs-status-title" style="color:#94A3B8;">Verwerken…</div>
       <div class="hs-status-sub">Even geduld</div>
     </div>
     """, unsafe_allow_html=True)
-
     with st.spinner(""):
         try:
             gestructureerd = structureer(st.session_state.raw_text)
-            body = (
-                f"{gestructureerd}"
-                f"\n\n---\n\nLetterlijke opname:\n{st.session_state.raw_text}"
-            )
+            body = f"{gestructureerd}\n\n---\n\nLetterlijke opname:\n{st.session_state.raw_text}"
             verstuur_email("Hersenspinsels", body)
             st.session_state.phase = "done"
         except Exception as e:
@@ -286,37 +291,30 @@ elif phase == "processing":
             st.session_state.phase = "error"
     st.rerun()
 
-# ── Done ──────────────────────────────────────────────────────────────────────
 elif phase == "done":
     st.markdown("""
-    <div class="hs-status">
+    <div class="hs-status hs-done">
       <div class="hs-status-icon">✓</div>
-      <div class="hs-status-title hs-done-title">Verstuurd</div>
+      <div class="hs-status-title">Verstuurd</div>
       <div class="hs-status-sub">Je mail is onderweg</div>
     </div>
     """, unsafe_allow_html=True)
-
     if st.button("Nieuwe opname"):
         st.session_state.phase = "idle"
         st.session_state.raw_text = ""
         st.rerun()
-
     components.html("""
-    <script>
-      setTimeout(function() { window.parent.location.reload(); }, 5000);
-    </script>
+    <script>setTimeout(function(){window.parent.location.reload();},5000);</script>
     """, height=0)
 
-# ── Error ─────────────────────────────────────────────────────────────────────
 elif phase == "error":
     st.markdown(f"""
-    <div class="hs-status">
+    <div class="hs-status hs-error">
       <div class="hs-status-icon">⚠</div>
-      <div class="hs-status-title hs-error-title">Er ging iets mis</div>
+      <div class="hs-status-title">Er ging iets mis</div>
       <div class="hs-error-detail">{st.session_state.error_msg}</div>
     </div>
     """, unsafe_allow_html=True)
-
     if st.button("Opnieuw proberen"):
         st.session_state.phase = "idle"
         st.rerun()
