@@ -113,7 +113,24 @@ st.html("""
   .hs-status-icon  { font-size:72px; margin-bottom:24px; line-height:1; }
   .hs-status-title { font-size:28px; font-weight:300; letter-spacing:-0.5px; margin-bottom:10px; }
   .hs-status-sub   { font-size:14px; color:#1E293B; }
-  .hs-done  .hs-status-title { color:#34D399; }
+
+  @keyframes hs-pop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    70%  { transform: scale(1.08); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .hs-done { animation: hs-pop 0.45s cubic-bezier(0.34,1.56,0.64,1); }
+  .hs-done .hs-status-icon {
+    width: 110px; height: 110px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 56px; color: #fff; font-weight: 700;
+    background: linear-gradient(145deg, #34D399 0%, #059669 100%);
+    box-shadow: 0 0 60px rgba(52,211,153,0.45), 0 12px 40px rgba(0,0,0,0.6);
+  }
+  .hs-done .hs-status-title {
+    color: #34D399; font-size: 36px; font-weight: 700; letter-spacing: -0.5px;
+  }
+  .hs-done .hs-status-sub { font-size: 16px; color: #94A3B8; }
   .hs-error .hs-status-title { color:#F87171; }
   .hs-error-detail {
     margin-top:20px; background:#0A0505; border:1px solid #2D1010;
@@ -342,8 +359,8 @@ elif phase == "done":
     st.markdown("""
     <div class="hs-status hs-done">
       <div class="hs-status-icon">✓</div>
-      <div class="hs-status-title">Verstuurd</div>
-      <div class="hs-status-sub">Je mail is onderweg</div>
+      <div class="hs-status-title">Mail verzonden!</div>
+      <div class="hs-status-sub">Je hersenspinsels staan in je zakelijke inbox</div>
     </div>
     """, unsafe_allow_html=True)
     if st.button("Nieuwe opname"):
