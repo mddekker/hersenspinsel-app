@@ -358,10 +358,25 @@ if phase == "idle":
 
     var text = (finalText.trim() || lastInterim.trim());
     if (text) {
-      // Stuur transcript naar Streamlit via URL-parameter
-      window.parent.location.href =
-        window.parent.location.pathname +
-        '?transcript=' + encodeURIComponent(text);
+      // Stuur transcript naar Streamlit via URL-parameter.
+      // Op Streamlit Cloud draait dit in een cross-origin iframe:
+      // parent.location LEZEN mag niet (SecurityError), maar ZETTEN wel.
+      // Het adres van de hoofdpagina halen we daarom uit document.referrer.
+      var target = '?transcript=' + encodeURIComponent(text);
+      var base = '';
+      try { base = window.parent.location.pathname; } catch (err) {}
+      if (!base) {
+        var ref = document.referrer || '';
+        base = ref ? ref.split('?')[0].split('#')[0] : '/';
+      }
+      try { window.parent.location.href = base + target; }
+      catch (err2) {
+        try { window.top.location.href = base + target; }
+        catch (err3) {
+          label.textContent = 'Doorsturen mislukt — probeer opnieuw';
+          setTimeout(function() { label.textContent = 'Tik om op te nemen'; }, 2500);
+        }
+      }
     } else {
       label.textContent = 'Niets gehoord — probeer opnieuw';
       setTimeout(function() { label.textContent = 'Tik om op te nemen'; }, 2000);
@@ -410,7 +425,17 @@ elif phase == "done":
         st.session_state.phase = "idle"
         st.session_state.raw_text = ""
         st.rerun()
-    components.html("<script>setTimeout(function(){window.parent.location.reload();},5000);</script>", height=0)
+    components.html("""<script>
+setTimeout(function() {
+  try { window.parent.location.reload(); }
+  catch (err) {
+    var ref = document.referrer || '';
+    var base = ref ? ref.split('?')[0].split('#')[0] : '/';
+    try { window.parent.location.href = base; }
+    catch (err2) { try { window.top.location.href = base; } catch (err3) {} }
+  }
+}, 5000);
+</script>""", height=0)
 
 # ── Error ──────────────────────────────────────────────────────────────────────
 elif phase == "error":
