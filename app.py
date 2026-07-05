@@ -61,10 +61,10 @@ def verstuur_email(onderwerp: str, tekst: str) -> None:
         s.sendmail(smtp_user, EMAIL_TO, msg.as_string())
 
 
-# SVG mic icon (wit, Feather-stijl) als data-URI voor in de CSS
-MIC_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='2' width='6' height='12' rx='3'/%3E%3Cpath d='M5 10a7 7 0 0 0 14 0'/%3E%3Cline x1='12' y1='17' x2='12' y2='21'/%3E%3Cline x1='8' y1='21' x2='16' y2='21'/%3E%3C/svg%3E"
-STOP_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' stroke='none'%3E%3Crect x='5' y='5' width='14' height='14' rx='2'/%3E%3C/svg%3E"
+MIC_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='2' width='6' height='12' rx='3'/%3E%3Cpath d='M5 10a7 7 0 0 0 14 0'/%3E%3Cline x1='12' y1='17' x2='12' y2='21'/%3E%3Cline x1='8' y1='21' x2='16' y2='21'/%3E%3C/svg%3E"
+STOP_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Crect x='5' y='5' width='14' height='14' rx='2'/%3E%3C/svg%3E"
 
+# ── Globale stijlen ────────────────────────────────────────────────────────────
 st.html(f"""
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -72,15 +72,13 @@ st.html(f"""
 <meta name="apple-mobile-web-app-title" content="Hersenspinsel">
 <style>
   @keyframes breathe {{
-    0%, 100% {{ box-shadow: 0 0 0 0 rgba(220,38,38,0.5), 0 24px 80px rgba(220,38,38,0.45); }}
-    50%       {{ box-shadow: 0 0 0 28px rgba(220,38,38,0), 0 24px 80px rgba(220,38,38,0.45); }}
+    0%,100% {{ opacity:1; transform:scale(1); }}
+    50%      {{ opacity:0.85; transform:scale(1.03); }}
   }}
 
   #MainMenu, footer, header, .stDeployButton,
   [data-testid="stToolbar"], [data-testid="stDecoration"],
-  [data-testid="stStatusWidget"] {{
-    display: none !important;
-  }}
+  [data-testid="stStatusWidget"] {{ display:none !important; }}
 
   html, body {{
     background: #060A12 !important;
@@ -89,7 +87,7 @@ st.html(f"""
 
   [data-testid="stAppViewContainer"] {{
     background:
-      radial-gradient(ellipse 70% 40% at 50% 0%, rgba(180,20,20,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 70% 40% at 50% 0%, rgba(180,20,20,0.2) 0%, transparent 65%),
       #060A12 !important;
   }}
 
@@ -101,10 +99,8 @@ st.html(f"""
     flex-direction: column !important;
     justify-content: center !important;
     align-items: center !important;
-    gap: 0 !important;
   }}
 
-  /* Logo */
   .hs-logo {{
     font-size: 11px;
     font-weight: 700;
@@ -115,140 +111,61 @@ st.html(f"""
     margin-bottom: 80px;
   }}
 
-  /* Label boven de knop */
   .hs-label {{
     font-size: 15px;
-    font-weight: 400;
-    color: #334155;
+    color: #2D3F55;
     letter-spacing: 0.5px;
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 48px;
   }}
 
-  /* De knop zelf */
+  /* Iframe container — groot genoeg voor de 260px knop */
   [data-testid="stCustomComponentV1"] {{
     display: flex !important;
     justify-content: center !important;
-    width: 100% !important;
+    align-items: center !important;
+    width: 280px !important;
+    height: 280px !important;
+    overflow: visible !important;
   }}
 
-  [data-testid="stCustomComponentV1"] button {{
-    width: 240px !important;
-    height: 240px !important;
-    border-radius: 50% !important;
-
-    /* Rijke rode gradiënt */
-    background:
-      radial-gradient(circle at 38% 32%, rgba(255,120,120,0.35), transparent 55%),
-      radial-gradient(circle at 65% 70%, rgba(100,0,0,0.5), transparent 50%),
-      linear-gradient(145deg, #E53E3E 0%, #9B1C1C 100%) !important;
-
-    /* Verberg het emoji-lettertype, toon de SVG mic */
-    color: transparent !important;
-    font-size: 0 !important;
-    background-image:
-      url("{MIC_SVG}"),
-      radial-gradient(circle at 38% 32%, rgba(255,120,120,0.35), transparent 55%),
-      radial-gradient(circle at 65% 70%, rgba(100,0,0,0.5), transparent 50%),
-      linear-gradient(145deg, #E53E3E 0%, #9B1C1C 100%) !important;
-    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat !important;
-    background-position: center, center, center, center !important;
-    background-size: 42%, auto, auto, auto !important;
-
+  [data-testid="stCustomComponentV1"] iframe {{
+    width: 280px !important;
+    height: 280px !important;
     border: none !important;
-    padding: 0 !important;
-    letter-spacing: 0 !important;
-
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,0.06) inset,
-      0 24px 80px rgba(220,38,38,0.45),
-      0 8px 32px rgba(0,0,0,0.7) !important;
-
-    animation: breathe 3s ease-in-out infinite !important;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-    cursor: pointer !important;
-    -webkit-tap-highlight-color: transparent !important;
-  }}
-
-  [data-testid="stCustomComponentV1"] button:hover {{
-    transform: scale(1.06) !important;
-  }}
-
-  [data-testid="stCustomComponentV1"] button:active {{
-    transform: scale(0.93) !important;
-    animation: none !important;
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,0.06) inset,
-      0 0 0 40px rgba(220,38,38,0.08),
-      0 8px 32px rgba(0,0,0,0.7) !important;
-  }}
-
-  /* Statusschermen */
-  .hs-status {{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 0 40px;
-  }}
-  .hs-status-icon {{
-    font-size: 72px;
-    margin-bottom: 24px;
-    line-height: 1;
-  }}
-  .hs-status-title {{
-    font-size: 28px;
-    font-weight: 300;
-    letter-spacing: -0.5px;
-    margin-bottom: 10px;
-  }}
-  .hs-status-sub {{
-    font-size: 14px;
-    color: #1E293B;
-    letter-spacing: 0.3px;
-  }}
-
-  .hs-done .hs-status-title  {{ color: #34D399; }}
-  .hs-error .hs-status-title {{ color: #F87171; }}
-
-  .hs-error-detail {{
-    margin-top: 20px;
-    background: #0A0505;
-    border: 1px solid #2D1010;
-    border-radius: 12px;
-    padding: 14px 18px;
-    font-size: 12px;
-    color: #5C2020;
-    font-family: monospace;
-    word-break: break-all;
-    max-width: 360px;
-  }}
-
-  /* Knop onderaan */
-  .stButton {{ display: flex; justify-content: center; margin-top: 48px; }}
-  .stButton > button {{
+    overflow: hidden !important;
     background: transparent !important;
-    border: 1px solid #1A2535 !important;
-    color: #2D3F55 !important;
-    border-radius: 999px !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    padding: 14px 36px !important;
-    width: auto !important;
-    box-shadow: none !important;
-    letter-spacing: 0.3px !important;
-    transition: all 0.2s ease !important;
-  }}
-  .stButton > button:hover {{
-    border-color: #2D3F55 !important;
-    color: #4A6080 !important;
   }}
 
-  [data-testid="stSpinner"] {{ display: flex; justify-content: center; }}
+  /* Status */
+  .hs-status {{
+    display:flex; flex-direction:column; align-items:center;
+    text-align:center; padding:0 40px;
+  }}
+  .hs-status-icon  {{ font-size:72px; margin-bottom:24px; line-height:1; }}
+  .hs-status-title {{ font-size:28px; font-weight:300; letter-spacing:-0.5px; margin-bottom:10px; }}
+  .hs-status-sub   {{ font-size:14px; color:#1E293B; }}
+  .hs-done  .hs-status-title {{ color:#34D399; }}
+  .hs-error .hs-status-title {{ color:#F87171; }}
+  .hs-error-detail {{
+    margin-top:20px; background:#0A0505; border:1px solid #2D1010;
+    border-radius:12px; padding:14px 18px; font-size:12px;
+    color:#5C2020; font-family:monospace; word-break:break-all; max-width:360px;
+  }}
+
+  .stButton {{ display:flex; justify-content:center; margin-top:48px; }}
+  .stButton > button {{
+    background:transparent !important; border:1px solid #1A2535 !important;
+    color:#2D3F55 !important; border-radius:999px !important; font-size:14px !important;
+    font-weight:500 !important; padding:14px 36px !important; width:auto !important;
+    box-shadow:none !important; letter-spacing:0.3px !important;
+  }}
+  .stButton > button:hover {{ border-color:#2D3F55 !important; color:#4A6080 !important; }}
+
+  [data-testid="stSpinner"] {{ display:flex; justify-content:center; }}
   [data-testid="stSpinner"] > div {{
-    width: 44px !important; height: 44px !important;
-    border-width: 3px !important;
-    border-color: #DC2626 transparent transparent transparent !important;
+    width:44px !important; height:44px !important; border-width:3px !important;
+    border-color:#DC2626 transparent transparent transparent !important;
   }}
 </style>
 """)
@@ -260,6 +177,7 @@ phase = st.session_state.phase
 
 if phase == "idle":
     st.markdown('<div class="hs-label">Tik om op te nemen</div>', unsafe_allow_html=True)
+
     text = speech_to_text(
         language="nl-NL",
         start_prompt="🎙",
@@ -268,6 +186,64 @@ if phase == "idle":
         use_container_width=False,
         key="stt",
     )
+
+    # Injecteer stijlen IN het iframe van streamlit_mic_recorder
+    components.html(f"""
+<script>
+(function() {{
+  var MIC = "{MIC_ICON}";
+  var STOP = "{STOP_ICON}";
+
+  var CSS = [
+    "* {{ box-sizing:border-box; }}",
+    "html, body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; ",
+    "  display:flex; justify-content:center; align-items:center; width:100%; height:100%; }}",
+    "button {{",
+    "  width:260px!important; height:260px!important; border-radius:50%!important;",
+    "  background-image: url('" + MIC + "'), linear-gradient(145deg,#E53E3E,#9B1C1C)!important;",
+    "  background-size:40%,100%!important; background-repeat:no-repeat,no-repeat!important;",
+    "  background-position:center,center!important;",
+    "  color:transparent!important; font-size:0!important; border:none!important;",
+    "  box-shadow:0 0 0 16px rgba(220,38,38,0.08),0 0 0 32px rgba(220,38,38,0.04),",
+    "            0 24px 80px rgba(220,38,38,0.5),0 8px 32px rgba(0,0,0,0.8)!important;",
+    "  cursor:pointer!important; outline:none!important;",
+    "  transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1)!important; }}",
+    "button:hover {{ transform:scale(1.07)!important; }}",
+    "button:active {{ transform:scale(0.93)!important; }}",
+    "input,textarea,p,div:not(#root),span {{ display:none!important; }}"
+  ].join("");
+
+  function inject() {{
+    var iframes = window.parent.document.querySelectorAll("iframe");
+    var done = false;
+    iframes.forEach(function(f) {{
+      try {{
+        var d = f.contentDocument || f.contentWindow.document;
+        if (!d) return;
+        var btn = d.querySelector("button");
+        if (!btn) return;
+        if (d.getElementById("hs-style")) return;
+        var s = d.createElement("style");
+        s.id = "hs-style";
+        s.textContent = CSS;
+        d.head.appendChild(s);
+        f.style.cssText = "width:280px!important;height:280px!important;border:none!important;overflow:hidden!important;background:transparent!important;";
+        done = true;
+      }} catch(e) {{}}
+    }});
+    return done;
+  }}
+
+  var tries = 0;
+  function tryInject() {{
+    if (!inject() && tries++ < 30) setTimeout(tryInject, 200);
+  }}
+  tryInject();
+  new MutationObserver(inject).observe(window.parent.document.body, {{childList:true, subtree:true}});
+}})();
+</script>
+""", height=0)
+
     if text and text.strip():
         st.session_state.raw_text = text.strip()
         st.session_state.phase = "processing"
@@ -303,9 +279,7 @@ elif phase == "done":
         st.session_state.phase = "idle"
         st.session_state.raw_text = ""
         st.rerun()
-    components.html("""
-    <script>setTimeout(function(){window.parent.location.reload();},5000);</script>
-    """, height=0)
+    components.html("<script>setTimeout(function(){window.parent.location.reload();},5000);</script>", height=0)
 
 elif phase == "error":
     st.markdown(f"""
